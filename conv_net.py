@@ -45,7 +45,7 @@ BATCH_SIZE = 64
 NUM_EPOCHS = 10
 EVAL_BATCH_SIZE = 64
 EVAL_FREQUENCY = 100  # Number of steps between evaluations.
-FLAGS = None
+# FLAGS = None
 # tf.float32
 
 #################################
@@ -147,14 +147,14 @@ class Model(object):
         self.eval_data = tf.placeholder(tf.float32,shape=(EVAL_BATCH_SIZE, IMAGE_SIZE, IMAGE_SIZE, NUM_CHANNELS))
 
         # Construct model
-        self.logits = construct_model()
+        self.logits = self.construct_model()
         self.prediction = tf.nn.softmax(self.logits)
 
         # Define loss and optimizer
         self.loss = tf.constant(0.0)
 
         # Evaluate model
-        correct_pred = tf.equal(tf.argmax(self.prediction, 1), tf.argmax(labels, 1))
+        correct_pred = tf.equal(tf.argmax(self.prediction, 1), tf.argmax(self.train_labels_node, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
         # init a tf session
@@ -232,9 +232,9 @@ class Model(object):
 
     def train(self, ims, labels):
         '''TODO: Your code here.'''
-        loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.train_labels_node, logits=logits))
+        loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.train_labels_node, logits=self.logits))
         # L2 regularization for the fully connected parameters.
-        regularizers = (tf.nn.l2_loss(fc1_weights) + tf.nn.l2_loss(fc1_biases) + tf.nn.l2_loss(fc2_weights) + tf.nn.l2_loss(fc2_biases))
+        regularizers = (tf.nn.l2_loss(self.fc1_weights) + tf.nn.l2_loss(self.fc1_biases) + tf.nn.l2_loss(self.fc2_weights) + tf.nn.l2_loss(self.fc2_biases))
         # Add the regularization term to the loss.
         loss += 5e-4 * regularizers
         # Optimizer: set up a variable that's incremented once per batch and
@@ -251,7 +251,7 @@ class Model(object):
         optimizer = tf.train.MomentumOptimizer(learning_rate,0.9).minimize(loss,global_step=batch)
 
         # Predictions for the current training minibatch.
-        train_prediction = tf.nn.softmax(logits)
+        train_prediction = tf.nn.softmax(self.logits)
         # Small utility function to evaluate a dataset by feeding batches of data to
         # {eval_data} and pulling the results from {eval_predictions}.
         # Saves memory and enables this to run on smaller GPUs.
@@ -330,7 +330,7 @@ def train_wrapper(model):
     TODO: to run your model, you may call model.train(), model.save(), model.valid()'''
     # declare model
     with tf.Session() as sess:
-        model=Model(sess)
+        model=Model()
         model.train(train_data, train_labels)
         model.valid(valid_data, valid_labels)
    
@@ -343,7 +343,7 @@ def test_wrapper(model):
     '''TODO: Your code here.'''
         # load checkpoints
     with tf.Session() as sess:
-        model=Model(sess)
+        model=Model()
         if model.load(model.checkpoint_path, model.dataset_name):
             print("[*] SUCCESS to load model for %s." % model.dataset_name)
         else:
