@@ -142,9 +142,9 @@ class Model(object):
         # Placeholders for input ims and labels
         # These placeholder nodes will be fed a batch of training data at each
         # training step using the {feed_dict} argument to the Run() call below.
-        self.train_data_node = tf.placeholder(data_type(),shape=(BATCH_SIZE, IMAGE_SIZE, IMAGE_SIZE, NUM_CHANNELS))
+        self.train_data_node = tf.placeholder(tf.float32,shape=(BATCH_SIZE, IMAGE_SIZE, IMAGE_SIZE, NUM_CHANNELS))
         self.train_labels_node = tf.placeholder(tf.int64, shape=(BATCH_SIZE,))
-        self.eval_data = tf.placeholder(data_type(),shape=(EVAL_BATCH_SIZE, IMAGE_SIZE, IMAGE_SIZE, NUM_CHANNELS))
+        self.eval_data = tf.placeholder(tf.float32,shape=(EVAL_BATCH_SIZE, IMAGE_SIZE, IMAGE_SIZE, NUM_CHANNELS))
 
         # Construct model
         self.logits = construct_model()
@@ -177,15 +177,15 @@ class Model(object):
         # initial value which will be assigned when we call:
         # {tf.global_variables_initializer().run()}
         # 5x5 filter, depth 32.
-        conv1_weights = tf.Variable(tf.truncated_normal([5, 5, NUM_CHANNELS, 32], stddev=0.1,seed=SEED, dtype=data_type()))
-        conv1_biases = tf.Variable(tf.zeros([32], dtype=data_type()))
-        conv2_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 64], stddev=0.1,seed=SEED, dtype=data_type()))
-        conv2_biases = tf.Variable(tf.constant(0.1, shape=[64], dtype=data_type()))
+        conv1_weights = tf.Variable(tf.truncated_normal([5, 5, NUM_CHANNELS, 32], stddev=0.1,seed=SEED, dtype=tf.float32))
+        conv1_biases = tf.Variable(tf.zeros([32], dtype=tf.float32))
+        conv2_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 64], stddev=0.1,seed=SEED, dtype=tf.float32))
+        conv2_biases = tf.Variable(tf.constant(0.1, shape=[64], dtype=tf.float32))
         # fully connected, depth 512.
-        fc1_weights = tf.Variable(tf.truncated_normal([IMAGE_SIZE // 4 * IMAGE_SIZE // 4 * 64, 512],stddev=0.1,seed=SEED,dtype=data_type()))
-        fc1_biases = tf.Variable(tf.constant(0.1, shape=[512], dtype=data_type()))
-        fc2_weights = tf.Variable(tf.truncated_normal([512, NUM_LABELS],stddev=0.1,seed=SEED,dtype=data_type()))
-        fc2_biases = tf.Variable(tf.constant(0.1, shape=[NUM_LABELS], dtype=data_type()))
+        fc1_weights = tf.Variable(tf.truncated_normal([IMAGE_SIZE // 4 * IMAGE_SIZE // 4 * 64, 512],stddev=0.1,seed=SEED,dtype=tf.float32))
+        fc1_biases = tf.Variable(tf.constant(0.1, shape=[512], dtype=tf.float32))
+        fc2_weights = tf.Variable(tf.truncated_normal([512, NUM_LABELS],stddev=0.1,seed=SEED,dtype=tf.float32))
+        fc2_biases = tf.Variable(tf.constant(0.1, shape=[NUM_LABELS], dtype=tf.float32))
         #################################
 
         ################ define network #################
@@ -239,7 +239,7 @@ class Model(object):
         loss += 5e-4 * regularizers
         # Optimizer: set up a variable that's incremented once per batch and
         # controls the learning rate decay.
-        batch = tf.Variable(0, dtype=data_type())
+        batch = tf.Variable(0, dtype=tf.float32)
         # Decay once per epoch, using an exponential schedule starting at 0.01.
         learning_rate = tf.train.exponential_decay(
           0.01,                # Base learning rate.
