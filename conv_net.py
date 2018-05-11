@@ -1,5 +1,11 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import os
-import cv2
+# import cv2
+from skimage.io import imread
+from skimage.transform import resize
 from PIL import Image
 import numpy as np
 import tensorflow as tf
@@ -9,17 +15,13 @@ import argparse
 from six.moves import urllib
 from six.moves import xrange  # pylint: disable=redefined-builtin
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 
 # configs
 FLAGS = tf.app.flags.FLAGS
 # mode
 tf.app.flags.DEFINE_boolean('is_training', True, 'training or testing')
 # data
-tf.app.flags.DEFINE_string('root_dir', './datasets/homework', 'data root dir')
+tf.app.flags.DEFINE_string('root_dir', '../data', 'data root dir')
 tf.app.flags.DEFINE_string('dataset', 'dset1', 'dset1 or dset2')
 tf.app.flags.DEFINE_integer('n_label', 65, 'number of classes')
 # trainig
@@ -77,15 +79,16 @@ class DataSet(object):
         label_dirs = os.listdir(self.data_dir)
         label_dirs.sort()
         for _label_dir in label_dirs:
-            print 'loaded {}'.format(_label_dir)
+            print('loaded {}'.format(_label_dir))
             category = int(_label_dir[5:])
             label = np.zeros(self.n_label)
             label[category] = 1
             imgs_name = os.listdir(os.path.join(self.data_dir, _label_dir))
             imgs_name.sort()
             for img_name in imgs_name:
-                im_ar = cv2.imread(os.path.join(self.data_dir, _label_dir, img_name))
-                im_ar = cv2.cvtColor(im_ar, cv2.COLOR_BGR2RGB)
+                # im_ar = cv2.imread(os.path.join(self.data_dir, _label_dir, img_name))
+                # im_ar = cv2.cvtColor(im_ar, cv2.COLOR_BGR2RGB)
+                im_ar = imread(os.path.join(self.data_dir, _label_dir, img_name))
                 im_ar = np.asarray(im_ar)
                 im_ar = self.preprocess(im_ar)
                 xs.append(im_ar)
@@ -95,7 +98,8 @@ class DataSet(object):
     def preprocess(self, im_ar):
         '''Resize raw image to a fixed size, and scale the pixel intensities.'''
         '''TODO: you may add data augmentation methods.'''
-        im_ar = cv2.resize(im_ar, (224, 224))
+        # im_ar = cv2.resize(im_ar, (224, 224))
+        image = resize(im_ar, (224, 224), mode='constant', preserve_range = True)
         im_ar = im_ar / 255.0
         return im_ar
 
@@ -103,7 +107,7 @@ class DataSet(object):
         '''Fetch the next batch of images and labels.'''
         if not self.has_next_batch():
             return None
-        print self.cur_index
+        print(self.cur_index)
         x_batch = []
         y_batch = []
         for i in xrange(self.batch_size):
