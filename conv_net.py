@@ -66,7 +66,7 @@ class DataSet(object):
         self.n_label = n_label
         self.data_aug = data_aug
         self.shuffle = shuffle
-        self.xs, self.ys = self.load_data(root_dir, dataset, sub_set, n_label)
+        self.xs, self.ys = self.load_data()
         self._num_examples = len(self.xs)
         self.init_epoch()
 
@@ -213,6 +213,11 @@ class Model(object):
         # activations such that no rescaling is needed at evaluation time.
         hidden = tf.nn.dropout(hidden, 0.5, seed=SEED)
         logits = tf.matmul(hidden, fc2_weights) + fc2_biases
+        self.loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.train_labels_node, logits=logits))
+        # L2 regularization for the fully connected parameters.
+        regularizers = (tf.nn.l2_loss(fc1_weights) + tf.nn.l2_loss(fc1_biases) + tf.nn.l2_loss(fc2_weights) + tf.nn.l2_loss(fc2_biases))
+        # Add the regularization term to the loss.
+        self.loss += 5e-4 * regularizers
         return logits
 
     def eval_in_batches(data, sess):
@@ -232,11 +237,6 @@ class Model(object):
 
     def train(self, ims, labels):
         '''TODO: Your code here.'''
-        loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.train_labels_node, logits=self.logits))
-        # L2 regularization for the fully connected parameters.
-        regularizers = (tf.nn.l2_loss(self.fc1_weights) + tf.nn.l2_loss(self.fc1_biases) + tf.nn.l2_loss(self.fc2_weights) + tf.nn.l2_loss(self.fc2_biases))
-        # Add the regularization term to the loss.
-        loss += 5e-4 * regularizers
         # Optimizer: set up a variable that's incremented once per batch and
         # controls the learning rate decay.
         batch = tf.Variable(0, dtype=tf.float32)
