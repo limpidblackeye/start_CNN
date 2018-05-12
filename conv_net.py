@@ -166,6 +166,11 @@ class Model(object):
         # Define loss and optimizer
         # self.loss = tf.constant(0.0)
         self.loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.train_labels_node, logits=self.logits))
+        # L2 regularization for the fully connected parameters.
+        regularizers = (tf.nn.l2_loss(self.fc1_weights) + tf.nn.l2_loss(self.fc1_biases) + tf.nn.l2_loss(self.fc2_weights) + tf.nn.l2_loss(self.fc2_biases))
+        # Add the regularization term to the loss.
+        self.loss += 5e-4 * regularizers
+
         # controls the learning rate decay.
         self.batch = tf.Variable(0, dtype=tf.float32)
         # Decay once per epoch, using an exponential schedule starting at 0.01.
@@ -231,10 +236,6 @@ class Model(object):
         hidden = tf.nn.dropout(hidden, self.drop_out_rate, seed=SEED)
         logits = tf.matmul(hidden, self.fc2_weights) + self.fc2_biases
         #! self.loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.train_labels_node, logits=logits))
-        # L2 regularization for the fully connected parameters.
-        regularizers = (tf.nn.l2_loss(self.fc1_weights) + tf.nn.l2_loss(self.fc1_biases) + tf.nn.l2_loss(self.fc2_weights) + tf.nn.l2_loss(self.fc2_biases))
-        # Add the regularization term to the loss.
-        self.loss += 5e-4 * regularizers
         return logits
 
     # def eval_in_batches(data, sess):
