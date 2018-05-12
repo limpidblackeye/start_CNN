@@ -26,7 +26,7 @@ tf.app.flags.DEFINE_string('root_dir', '../data', 'data root dir')
 tf.app.flags.DEFINE_string('dataset', 'dset1', 'dset1 or dset2')
 tf.app.flags.DEFINE_integer('n_label', 65, 'number of classes')
 # trainig
-tf.app.flags.DEFINE_integer('batch_size', 64, 'mini batch for a training iter')
+tf.app.flags.DEFINE_integer('batch_size', 8, 'mini batch for a training iter')
 tf.app.flags.DEFINE_string('save_dir', './checkpoints', 'dir to the trained model')
 # test
 tf.app.flags.DEFINE_string('my_best_model', './checkpoints/model.ckpt-1000', 'for test')
@@ -42,7 +42,7 @@ PIXEL_DEPTH = 255
 NUM_LABELS = 65
 VALIDATION_SIZE = 5000  # Size of the validation set.
 SEED = None # 66478  # Set to None for random seed.
-BATCH_SIZE = 64
+BATCH_SIZE = 8
 NUM_EPOCHS = 10
 EVAL_BATCH_SIZE = 64
 EVAL_FREQUENCY = 100  # Number of steps between evaluations.
@@ -79,28 +79,30 @@ class DataSet(object):
         ys = []
         label_dirs = os.listdir(self.data_dir)
         label_dirs.sort()
+        label_index = 0
         for _label_dir in label_dirs:
-            print('loaded {}'.format(_label_dir))
-            category = int(_label_dir[5:])
+            print 'loaded {}'.format(_label_dir)
             label = np.zeros(self.n_label)
-            label[category] = 1
+            label[label_index] = 1
+            label_index += 1
             imgs_name = os.listdir(os.path.join(self.data_dir, _label_dir))
             imgs_name.sort()
             for img_name in imgs_name:
                 # im_ar = cv2.imread(os.path.join(self.data_dir, _label_dir, img_name))
                 # im_ar = cv2.cvtColor(im_ar, cv2.COLOR_BGR2RGB)
                 im_ar = imread(os.path.join(self.data_dir, _label_dir, img_name))
+                # print(os.path.join(self.data_dir, _label_dir, img_name))
                 im_ar = np.asarray(im_ar)
                 im_ar = self.preprocess(im_ar)
                 xs.append(im_ar)
-                ys.append(label)
+                ys.append(list(label))
         return xs, ys
 
     def preprocess(self, im_ar):
         '''Resize raw image to a fixed size, and scale the pixel intensities.'''
         '''TODO: you may add data augmentation methods.'''
         # im_ar = cv2.resize(im_ar, (224, 224))
-        image = resize(im_ar, (224, 224), mode='constant', preserve_range = True)
+        im_ar = resize(im_ar, (224, 224), mode='constant', preserve_range = True)
         im_ar = im_ar / 255.0
         return im_ar
 
@@ -108,13 +110,15 @@ class DataSet(object):
         '''Fetch the next batch of images and labels.'''
         if not self.has_next_batch():
             return None
-        print(self.cur_index)
+        # print(self.cur_index)
         x_batch = []
         y_batch = []
         for i in xrange(self.batch_size):
             x_batch.append(self.xs[self.indices[self.cur_index+i]])
             y_batch.append(self.ys[self.indices[self.cur_index+i]])
         self.cur_index += self.batch_size
+        # print("np.asarray(x_batch).shape:",np.asarray(x_batch).shape)
+        # print("np.asarray(y_batch).shape:",np.asarray(y_batch).shape)
         return np.asarray(x_batch), np.asarray(y_batch)
 
     def has_next_batch(self):
@@ -144,7 +148,7 @@ class Model(object):
         # These placeholder nodes will be fed a batch of training data at each
         # training step using the {feed_dict} argument to the Run() call below.
         self.train_data_node = tf.placeholder(tf.float32,shape=(BATCH_SIZE, IMAGE_SIZE, IMAGE_SIZE, NUM_CHANNELS))
-        self.train_labels_node = tf.placeholder(tf.int64, shape=(BATCH_SIZE,))
+        self.train_labels_node = tf.placeholder(tf.int64, shape=(BATCH_SIZE, NUM_LABELS))
         self.eval_data = tf.placeholder(tf.float32,shape=(EVAL_BATCH_SIZE, IMAGE_SIZE, IMAGE_SIZE, NUM_CHANNELS))
         self.drop_out_rate = tf.placeholder(tf.float32)
 
@@ -162,10 +166,9 @@ class Model(object):
         # Construct model
         self.logits = self.construct_model()
     
-
         # Define loss and optimizer
         # self.loss = tf.constant(0.0)
-        self.loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.train_labels_node, logits=self.logits))
+        self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.train_labels_node, logits=self.logits))
         # L2 regularization for the fully connected parameters.
         regularizers = (tf.nn.l2_loss(self.fc1_weights) + tf.nn.l2_loss(self.fc1_biases) + tf.nn.l2_loss(self.fc2_weights) + tf.nn.l2_loss(self.fc2_biases))
         # Add the regularization term to the loss.
@@ -177,11 +180,11 @@ class Model(object):
         self.learning_rate = tf.train.exponential_decay(
           0.01,                # Base learning rate.
           self.batch * BATCH_SIZE,  # Current index into the dataset.
-          len(labels),         # Decay step.
+          self.train_labels_node.shape[0],         # Decay step.
           0.95,                # Decay rate.
           staircase=True)
         # Use simple momentum for the optimization.
-        self.optimizer = tf.train.MomentumOptimizer(self.learning_rate,0.9).minimize(self.loss, global_step=batch)
+        self.optimizer = tf.train.MomentumOptimizer(self.learning_rate,0.9).minimize(self.loss, global_step=self.batch)
 
         # Evaluate model
         self.prediction = tf.nn.softmax(self.logits)
@@ -234,7 +237,7 @@ class Model(object):
         # Add a 50% dropout during training only. Dropout also scales
         # activations such that no rescaling is needed at evaluation time.
         hidden = tf.nn.dropout(hidden, self.drop_out_rate, seed=SEED)
-        logits = tf.matmul(hidden, self.fc2_weights) + self.fc2_biases
+        logits = tf.add(tf.matmul(hidden, self.fc2_weights), self.fc2_biases)
         #! self.loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.train_labels_node, logits=logits))
         return logits
 
@@ -260,8 +263,16 @@ class Model(object):
         # Small utility function to evaluate a dataset by feeding batches of data to
         # {eval_data} and pulling the results from {eval_predictions}.
         # Saves memory and enables this to run on smaller GPUs.
+        # print("ims.shape:",ims.shape)
+        # print("labels.shape:",labels.shape)
+        # print("train_data_node.shape",self.train_data_node.shape)
+        # print("train_labels_node.shape",self.train_labels_node.shape)
         with tf.device('/gpu:1'):
-            logits, label, loss, acc, lr  = self.sess.run([self.logits, self.train_labels_node, self.loss, self.accuracy,self.learning_rate], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.5})
+        # with tf.Session() as sess:
+        #     sess.run(self.init)
+            # logits, label, loss, acc  = self.sess.run([self.logits, self.train_labels_node, self.loss,  self.accuracy], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.5})
+            label, loss, acc, lr  = self.sess.run([self.train_labels_node, self.loss, self.accuracy,self.learning_rate], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.5})
+            # logits, label, loss, acc, lr  = self.sess.run([self.logits, self.train_labels_node, self.loss, self.accuracy,self.learning_rate], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.5})
         #print "The shape is:"
         #print "logits=", logits
         #print "label=", label
@@ -301,17 +312,18 @@ def train_wrapper(model):
     valid_set = DataSet(FLAGS.root_dir, FLAGS.dataset, 'valid',
                         FLAGS.batch_size, FLAGS.n_label,
                         data_aug=False, shuffle=False)
-    valid_data, valid_labels = valid_set.load_data()
     '''create a tf session for training and validation
     TODO: to run your model, you may call model.train(), model.save(), model.valid()'''
     # declare model
 
     # Create a local session to run the training.
     num_epochs = NUM_EPOCHS
-    train_size = len(labels)
+    x,y = train_set.load_data()
+    train_size = len(y)
+    print("train_size:",train_size)
     start_time = time.time()
     # Run all the initializers to prepare the trainable parameters.
-    tf.global_variables_initializer().run()
+    # tf.global_variables_initializer().run()
     print('Initialized!')
     # Loop through training steps.
     best_accuracy = 0
