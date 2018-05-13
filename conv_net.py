@@ -41,7 +41,7 @@ NUM_CHANNELS = 3
 PIXEL_DEPTH = 255
 NUM_LABELS = 65
 VALIDATION_SIZE = 5000  # Size of the validation set.
-SEED = None # 66478  # Set to None for random seed.
+# SEED = None # 66478  # Set to None for random seed.
 BATCH_SIZE = 8
 NUM_EPOCHS = 10
 EVAL_BATCH_SIZE = 64
@@ -156,14 +156,14 @@ class Model(object):
         self.drop_out_rate = tf.placeholder(tf.float32)
 
         # define weight and bias
-        self.conv1_weights = tf.Variable(tf.truncated_normal([5, 5, NUM_CHANNELS, 32], stddev=0.1,seed=SEED, dtype=tf.float32))
+        self.conv1_weights = tf.Variable(tf.truncated_normal([5, 5, NUM_CHANNELS, 32], stddev=0.1, dtype=tf.float32))
         self.conv1_biases = tf.Variable(tf.random_normal([32], dtype=tf.float32))
-        self.conv2_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 64], stddev=0.1,seed=SEED, dtype=tf.float32))
+        self.conv2_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 64], stddev=0.1, dtype=tf.float32))
         self.conv2_biases = tf.Variable(tf.random_normal([64], dtype=tf.float32))
         # fully connected, depth 1024.
-        self.fc1_weights = tf.Variable(tf.truncated_normal([IMAGE_SIZE // 4 * IMAGE_SIZE // 4 * 64, 1024],stddev=0.1,seed=SEED,dtype=tf.float32))
+        self.fc1_weights = tf.Variable(tf.truncated_normal([IMAGE_SIZE // 4 * IMAGE_SIZE // 4 * 64, 1024],stddev=0.1,dtype=tf.float32))
         self.fc1_biases = tf.Variable(tf.random_normal([1024], dtype=tf.float32))
-        self.fc2_weights = tf.Variable(tf.truncated_normal([1024, NUM_LABELS],stddev=0.1,seed=SEED,dtype=tf.float32))
+        self.fc2_weights = tf.Variable(tf.truncated_normal([1024, NUM_LABELS],stddev=0.1,dtype=tf.float32))
         self.fc2_biases = tf.Variable(tf.random_normal([NUM_LABELS], dtype=tf.float32))
 
         # Construct model
@@ -189,7 +189,7 @@ class Model(object):
         #   staircase=True)
         # # Use simple momentum for the optimization.
         # self.optimizer = tf.train.MomentumOptimizer(self.learning_rate,0.9).minimize(self.loss, global_step=self.batch)
-        self.learning_rate = 0.01
+        self.learning_rate = 0.001
         self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
 
         # Evaluate model
@@ -277,7 +277,7 @@ class Model(object):
         # with tf.Session() as sess:
         #     sess.run(self.init)
             # logits, label, loss, acc  = self.sess.run([self.logits, self.train_labels_node, self.loss,  self.accuracy], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.5})
-            label, loss, acc, fc2_biases  = self.sess.run([self.train_labels_node, self.loss, self.accuracy, self.fc2_biases], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.8})
+            label, loss, acc, _, fc2_biases  = self.sess.run([self.train_labels_node, self.loss, self.accuracy, self.optimizer, self.fc2_biases], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.8})
             # logits, label, loss, acc, lr  = self.sess.run([self.logits, self.train_labels_node, self.loss, self.accuracy,self.learning_rate], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.5})
         #print "The shape is:"
         #print "logits=", logits
