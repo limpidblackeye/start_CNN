@@ -142,8 +142,8 @@ class Model(object):
 
         # Construct model
         self.logits = self.construct_model()
-        print "logits' shape is:", tf.shape(self.logits)
-        print "Y's shape is", tf.shape(self.Y)
+        print("logits' shape is:", tf.shape(self.logits))
+        print("Y's shape is", tf.shape(self.Y))
         #self.logits=tf.Print(self.logits,["logits", self.logits.shape()])
         self.shapelogits = tf.shape(self.logits)
 
@@ -267,11 +267,14 @@ def train_wrapper(model):
                 predictions, loss, acc = model.valid(valid_img, valid_label)
                 tot_acc += acc * len(valid_img)
                 tot_input += len(valid_img)
-            print "current loss is:", loss_train, ", acc is:", acc_train, ", iter=", i
-            print "tot_acc=", tot_acc, "tot_input=", tot_input
+            print("current loss is:", loss_train)
+            print(", acc is:", acc_train)
+            print(", iter=", i)
+            print("tot_acc=", tot_acc)
+            print("tot_input=", tot_input)
             acc = tot_acc / tot_input
             valid_set.init_epoch()
-            print "current accuracy is:", acc
+            print("current accuracy is:", acc)
             if acc > best_accuracy:
                 model.save(i)
                 best_accuracy = acc
