@@ -24,9 +24,9 @@ tf.app.flags.DEFINE_boolean('is_training', True, 'training or testing')
 # data
 tf.app.flags.DEFINE_string('root_dir', '../data', 'data root dir')
 tf.app.flags.DEFINE_string('dataset', 'dset1', 'dset1 or dset2')
-tf.app.flags.DEFINE_integer('n_label', 65, 'number of classes')
+tf.app.flags.DEFINE_integer('n_label', 10, 'number of classes')
 # trainig
-tf.app.flags.DEFINE_integer('batch_size', 8, 'mini batch for a training iter')
+tf.app.flags.DEFINE_integer('batch_size', 4, 'mini batch for a training iter')
 tf.app.flags.DEFINE_string('save_dir', './checkpoints', 'dir to the trained model')
 # test
 tf.app.flags.DEFINE_string('my_best_model', './checkpoints/model.ckpt-1000', 'for test')
@@ -39,12 +39,12 @@ display_iteration, valid_iteration and etc. '''
 IMAGE_SIZE = 224
 NUM_CHANNELS = 3
 PIXEL_DEPTH = 255
-NUM_LABELS = 65
+NUM_LABELS = 10
 VALIDATION_SIZE = 5000  # Size of the validation set.
 # SEED = None # 66478  # Set to None for random seed.
-BATCH_SIZE = 8
+BATCH_SIZE = 4
 NUM_EPOCHS = 10
-EVAL_BATCH_SIZE = 64
+EVAL_BATCH_SIZE = BATCH_SIZE
 EVAL_FREQUENCY = 100  # Number of steps between evaluations.
 # FLAGS = None
 # tf.float32
@@ -161,9 +161,9 @@ class Model(object):
         self.conv2_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 64], stddev=0.1, dtype=tf.float32))
         self.conv2_biases = tf.Variable(tf.random_normal([64], dtype=tf.float32))
         # fully connected, depth 1024.
-        self.fc1_weights = tf.Variable(tf.truncated_normal([IMAGE_SIZE // 4 * IMAGE_SIZE // 4 * 64, 1024],stddev=0.1,dtype=tf.float32))
-        self.fc1_biases = tf.Variable(tf.random_normal([1024], dtype=tf.float32))
-        self.fc2_weights = tf.Variable(tf.truncated_normal([1024, NUM_LABELS],stddev=0.1,dtype=tf.float32))
+        self.fc1_weights = tf.Variable(tf.truncated_normal([IMAGE_SIZE // 4 * IMAGE_SIZE // 4 * 64, 512],stddev=0.1,dtype=tf.float32))
+        self.fc1_biases = tf.Variable(tf.random_normal([512], dtype=tf.float32))
+        self.fc2_weights = tf.Variable(tf.truncated_normal([512, NUM_LABELS],stddev=0.1,dtype=tf.float32))
         self.fc2_biases = tf.Variable(tf.random_normal([NUM_LABELS], dtype=tf.float32))
 
         # Construct model
@@ -178,19 +178,24 @@ class Model(object):
         self.loss += 5e-4 * regularizers
 
         # optimizer
-        # # controls the learning rate decay.
-        # self.batch = tf.Variable(0, dtype=tf.float32)
-        # # Decay once per epoch, using an exponential schedule starting at 0.01.
+        # controls the learning rate decay.
+        self.batch = tf.Variable(0, dtype=tf.float32)
+        # Decay once per epoch, using an exponential schedule starting at 0.01.
         # self.learning_rate = tf.train.exponential_decay(
-        #   0.01,                # Base learning rate.
+        #   0.1,                # Base learning rate.
         #   self.batch * BATCH_SIZE,  # Current index into the dataset.
         #   self.train_labels_node.shape[0],         # Decay step.
-        #   0.95,                # Decay rate.
+        #   0.999,                # Decay rate.
         #   staircase=True)
-        # # Use simple momentum for the optimization.
+        self.learning_rate = tf.train.piecewise_constant(
+            self.batch * BATCH_SIZE,
+            boundaries = [4000.0*BATCH_SIZE, 6000.0*BATCH_SIZE, 8000.0*BATCH_SIZE ],
+            values = [0.01, 0.001, 0.0005, 0.00001]
+            )
+        # Use simple momentum for the optimization.
         # self.optimizer = tf.train.MomentumOptimizer(self.learning_rate,0.9).minimize(self.loss, global_step=self.batch)
-        self.learning_rate = 0.001
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
+        # self.learning_rate = 0.01
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss, global_step=self.batch)
 
         # Evaluate model
         self.prediction = tf.nn.softmax(self.logits)
@@ -277,12 +282,12 @@ class Model(object):
         # with tf.Session() as sess:
         #     sess.run(self.init)
             # logits, label, loss, acc  = self.sess.run([self.logits, self.train_labels_node, self.loss,  self.accuracy], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.5})
-            label, loss, acc, _, fc2_biases  = self.sess.run([self.train_labels_node, self.loss, self.accuracy, self.optimizer, self.fc2_biases], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.8})
+            logit, label, loss, opti, acc, lr  = self.sess.run([self.logits,self.train_labels_node, self.loss, self.optimizer,  self.accuracy, self.learning_rate], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.8})
             # logits, label, loss, acc, lr  = self.sess.run([self.logits, self.train_labels_node, self.loss, self.accuracy,self.learning_rate], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.5})
         #print "The shape is:"
         #print "logits=", logits
         #print "label=", label
-            return loss, acc, fc2_biases
+            return loss, acc, lr
 
     def valid(self, ims, labels):
         '''TODO: Your code here.'''
@@ -339,8 +344,8 @@ def train_wrapper(model):
         if not train_set.has_next_batch():
             train_set.init_epoch()
         train_data, train_labels = train_set.next_batch()
-        loss, acc, fc2_biases = model.train(train_data, train_labels)
-        print("!!!fc2_biases:",fc2_biases)
+        loss, acc, lr = model.train(train_data, train_labels)
+        # print("!!!fc2_biases:",fc2_biases)
         # batch
         # offset = (step * BATCH_SIZE) % (train_size - BATCH_SIZE)
         # batch_data = train_data[offset:(offset + BATCH_SIZE), ...]
@@ -370,7 +375,7 @@ def train_wrapper(model):
             start_time = time.time()
 
             print('Step %d (epoch %.2f), %.1f ms' % (step, float(step) * BATCH_SIZE / train_size, 1000 * elapsed_time / EVAL_FREQUENCY))
-            print('Minibatch loss: %.3f, learning rate: %.6f' % (loss, 0.01))
+            print('Minibatch loss: %.3f, learning rate: %.6f' % (loss, lr))
             
             print('Minibatch accuracy: %.1f' % acc)
             print('Validation accuracy: %.1f' % acc_val)
