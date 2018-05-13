@@ -78,10 +78,13 @@ class DataSet(object):
         xs = []
         ys = []
         label_dirs = os.listdir(self.data_dir)
-        label_dirs.sort()
+        a_label_dirs = [int(label_dirs[k][5:]) for k in range(len(label_dirs))]
+        label_dirs = [x for (y,x) in sorted(zip(a_label_dirs,label_dirs))]
+        # label_dirs.sort()
         label_index = 0
         for _label_dir in label_dirs:
-            print 'loaded {}'.format(_label_dir)
+            # print(label_index)
+            print('loaded {}'.format(_label_dir))
             label = np.zeros(self.n_label)
             label[label_index] = 1
             label_index += 1
@@ -318,8 +321,7 @@ def train_wrapper(model):
 
     # Create a local session to run the training.
     num_epochs = NUM_EPOCHS
-    x,y = train_set.load_data()
-    train_size = len(y)
+    train_size = train_set._num_examples
     print("train_size:",train_size)
     start_time = time.time()
     # Run all the initializers to prepare the trainable parameters.
@@ -362,10 +364,11 @@ def train_wrapper(model):
 
             print('Step %d (epoch %.2f), %.1f ms' % (step, float(step) * BATCH_SIZE / train_size, 1000 * elapsed_time / EVAL_FREQUENCY))
             print('Minibatch loss: %.3f, learning rate: %.6f' % (loss, lr))
-            print('Minibatch error: %.1f%%' % loss)
-            print('Validation accuracy: %.1f%%' % acc_val)
-            if acc > best_accuracy:
-                best_accuracy = acc
+            
+            print('Minibatch accuracy: %.1f%%' % acc*100)
+            print('Validation accuracy: %.1f%%' % acc_val*100)
+            if acc_val > best_accuracy:
+                best_accuracy = acc_val
                 model.save(step)
             sys.stdout.flush()
 
