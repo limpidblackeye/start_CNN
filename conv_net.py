@@ -189,7 +189,7 @@ class Model(object):
         #   staircase=True)
         # # Use simple momentum for the optimization.
         # self.optimizer = tf.train.MomentumOptimizer(self.learning_rate,0.9).minimize(self.loss, global_step=self.batch)
-        self.learning_rate = 0.1
+        self.learning_rate = 0.01
         self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
 
         # Evaluate model
@@ -273,16 +273,16 @@ class Model(object):
         # print("labels.shape:",labels.shape)
         # print("train_data_node.shape",self.train_data_node.shape)
         # print("train_labels_node.shape",self.train_labels_node.shape)
-        with tf.device('/gpu:1'):
+        with tf.device('/gpu:0'):
         # with tf.Session() as sess:
         #     sess.run(self.init)
             # logits, label, loss, acc  = self.sess.run([self.logits, self.train_labels_node, self.loss,  self.accuracy], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.5})
-            label, loss, acc  = self.sess.run([self.train_labels_node, self.loss, self.accuracy], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.8})
+            label, loss, acc, fc2_biases  = self.sess.run([self.train_labels_node, self.loss, self.accuracy, self.fc2_biases], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.8})
             # logits, label, loss, acc, lr  = self.sess.run([self.logits, self.train_labels_node, self.loss, self.accuracy,self.learning_rate], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.5})
         #print "The shape is:"
         #print "logits=", logits
         #print "label=", label
-            return loss, acc
+            return loss, acc, fc2_biases
 
     def valid(self, ims, labels):
         '''TODO: Your code here.'''
@@ -339,7 +339,8 @@ def train_wrapper(model):
         if not train_set.has_next_batch():
             train_set.init_epoch()
         train_data, train_labels = train_set.next_batch()
-        loss, acc = model.train(train_data, train_labels)
+        loss, acc, fc2_biases = model.train(train_data, train_labels)
+        print("!!!fc2_biases:",fc2_biases)
         # batch
         # offset = (step * BATCH_SIZE) % (train_size - BATCH_SIZE)
         # batch_data = train_data[offset:(offset + BATCH_SIZE), ...]
