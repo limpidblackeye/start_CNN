@@ -1,5 +1,7 @@
 import os
-import cv2
+# import cv2
+from skimage.io import imread
+from skimage.transform import resize
 from PIL import Image
 import numpy as np
 import tensorflow as tf
@@ -49,28 +51,34 @@ class DataSet(object):
         xs = []
         ys = []
         label_dirs = os.listdir(self.data_dir)
-        label_dirs.sort()
+        a_label_dirs = [int(label_dirs[k][5:]) for k in range(len(label_dirs))]
+        label_dirs = [x for (y,x) in sorted(zip(a_label_dirs,label_dirs))]
+        # label_dirs.sort()
         label_index = 0
         for _label_dir in label_dirs:
-            print 'loaded {}'.format(_label_dir)
+            # print(label_index)
+            print('loaded {}'.format(_label_dir))
             label = np.zeros(self.n_label)
             label[label_index] = 1
             label_index += 1
             imgs_name = os.listdir(os.path.join(self.data_dir, _label_dir))
             imgs_name.sort()
             for img_name in imgs_name:
-                im_ar = cv2.imread(os.path.join(self.data_dir, _label_dir, img_name))
-                im_ar = cv2.cvtColor(im_ar, cv2.COLOR_BGR2RGB)
+                # im_ar = cv2.imread(os.path.join(self.data_dir, _label_dir, img_name))
+                # im_ar = cv2.cvtColor(im_ar, cv2.COLOR_BGR2RGB)
+                im_ar = imread(os.path.join(self.data_dir, _label_dir, img_name))
+                # print(os.path.join(self.data_dir, _label_dir, img_name))
                 im_ar = np.asarray(im_ar)
                 im_ar = self.preprocess(im_ar)
                 xs.append(im_ar)
-                ys.append(label)
+                ys.append(list(label))
         return xs, ys
 
     def preprocess(self, im_ar):
         '''Resize raw image to a fixed size, and scale the pixel intensities.'''
         '''TODO: you may add data augmentation methods.'''
-        im_ar = cv2.resize(im_ar, (224, 224))
+        # im_ar = cv2.resize(im_ar, (224, 224))
+        im_ar = resize(im_ar, (224, 224), mode='constant', preserve_range = True)
         im_ar = im_ar / 255.0
         return im_ar
 
@@ -78,16 +86,20 @@ class DataSet(object):
         '''Fetch the next batch of images and labels.'''
         if not self.has_next_batch():
             return None
+        # print(self.cur_index)
         x_batch = []
         y_batch = []
         for i in xrange(self.batch_size):
             x_batch.append(self.xs[self.indices[self.cur_index+i]])
             y_batch.append(self.ys[self.indices[self.cur_index+i]])
         self.cur_index += self.batch_size
+        # print("np.asarray(x_batch).shape:",np.asarray(x_batch).shape)
+        # print("np.asarray(y_batch).shape:",np.asarray(y_batch).shape)
         return np.asarray(x_batch), np.asarray(y_batch)
 
     def has_next_batch(self):
-        '''If no batch left, a training epoch is over.'''
+        '''Call this function before fetching the next batch.
+        If no batch left, a training epoch is over.'''
         start = self.cur_index
         end = self.batch_size + start
         if end > self._num_examples: return False
@@ -245,8 +257,7 @@ def train_wrapper(model):
             train_set.init_epoch()
         train_img, train_label = train_set.next_batch()
         if len(train_img == FLAGS.batch_size):
-            loss, acc = model.train(train_img, train_label)
-            print "current loss is:", loss, ", acc is:", acc, ", iter=", i
+            loss_train, acc_train = model.train(train_img, train_label)
         if i % 1000 == 0:
             pre = list()
             tot_acc = 0
@@ -256,6 +267,7 @@ def train_wrapper(model):
                 predictions, loss, acc = model.valid(valid_img, valid_label)
                 tot_acc += acc * len(valid_img)
                 tot_input += len(valid_img)
+            print "current loss is:", loss_train, ", acc is:", acc_train, ", iter=", i
             print "tot_acc=", tot_acc, "tot_input=", tot_input
             acc = tot_acc / tot_input
             valid_set.init_epoch()
