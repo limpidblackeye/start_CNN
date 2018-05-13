@@ -158,8 +158,11 @@ class Model(object):
         # define weight and bias
         self.conv1_weights = tf.Variable(tf.truncated_normal([5, 5, NUM_CHANNELS, 32], stddev=0.1, dtype=tf.float32))
         self.conv1_biases = tf.Variable(tf.random_normal([32], dtype=tf.float32))
-        self.conv2_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 64], stddev=0.1, dtype=tf.float32))
-        self.conv2_biases = tf.Variable(tf.random_normal([64], dtype=tf.float32))
+        self.conv2_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 32], stddev=0.1, dtype=tf.float32))
+        self.conv2_biases = tf.Variable(tf.random_normal([32], dtype=tf.float32))
+        self.conv3_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 64], stddev=0.1, dtype=tf.float32))
+        self.conv3_biases = tf.Variable(tf.random_normal([64], dtype=tf.float32))
+ 
         # fully connected, depth 1024.
         self.fc1_weights = tf.Variable(tf.truncated_normal([IMAGE_SIZE // 4 * IMAGE_SIZE // 4 * 64, 512],stddev=0.1,dtype=tf.float32))
         self.fc1_biases = tf.Variable(tf.random_normal([512], dtype=tf.float32))
@@ -238,6 +241,11 @@ class Model(object):
         conv = tf.nn.conv2d(pool,self.conv2_weights,strides=[1, 1, 1, 1],padding='SAME')
         relu = tf.nn.relu(tf.nn.bias_add(conv, self.conv2_biases))
         pool = tf.nn.max_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
+
+        conv = tf.nn.conv2d(pool,self.conv3_weights,strides=[1, 1, 1, 1],padding='SAME')
+        relu = tf.nn.relu(tf.nn.bias_add(conv, self.conv3_biases))
+        pool = tf.nn.max_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
+
         # Reshape the feature map cuboid into a 2D matrix to feed it to the
         # fully connected layers.
         pool_shape = pool.get_shape().as_list()
