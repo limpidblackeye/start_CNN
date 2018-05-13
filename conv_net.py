@@ -157,14 +157,14 @@ class Model(object):
 
         # define weight and bias
         self.conv1_weights = tf.Variable(tf.truncated_normal([5, 5, NUM_CHANNELS, 32], stddev=0.1,seed=SEED, dtype=tf.float32))
-        self.conv1_biases = tf.Variable(tf.zeros([32], dtype=tf.float32))
+        self.conv1_biases = tf.Variable(tf.random_normal([32], dtype=tf.float32))
         self.conv2_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 64], stddev=0.1,seed=SEED, dtype=tf.float32))
-        self.conv2_biases = tf.Variable(tf.constant(0.1, shape=[64], dtype=tf.float32))
-        # fully connected, depth 512.
-        self.fc1_weights = tf.Variable(tf.truncated_normal([IMAGE_SIZE // 4 * IMAGE_SIZE // 4 * 64, 512],stddev=0.1,seed=SEED,dtype=tf.float32))
-        self.fc1_biases = tf.Variable(tf.constant(0.1, shape=[512], dtype=tf.float32))
-        self.fc2_weights = tf.Variable(tf.truncated_normal([512, NUM_LABELS],stddev=0.1,seed=SEED,dtype=tf.float32))
-        self.fc2_biases = tf.Variable(tf.constant(0.1, shape=[NUM_LABELS], dtype=tf.float32))
+        self.conv2_biases = tf.Variable(tf.random_normal([64], dtype=tf.float32))
+        # fully connected, depth 1024.
+        self.fc1_weights = tf.Variable(tf.truncated_normal([IMAGE_SIZE // 4 * IMAGE_SIZE // 4 * 64, 1024],stddev=0.1,seed=SEED,dtype=tf.float32))
+        self.fc1_biases = tf.Variable(tf.random_normal([1024], dtype=tf.float32))
+        self.fc2_weights = tf.Variable(tf.truncated_normal([1024, NUM_LABELS],stddev=0.1,seed=SEED,dtype=tf.float32))
+        self.fc2_biases = tf.Variable(tf.random_normal([NUM_LABELS], dtype=tf.float32))
 
         # Construct model
         self.logits = self.construct_model()
@@ -177,17 +177,20 @@ class Model(object):
         # Add the regularization term to the loss.
         self.loss += 5e-4 * regularizers
 
-        # controls the learning rate decay.
-        self.batch = tf.Variable(0, dtype=tf.float32)
-        # Decay once per epoch, using an exponential schedule starting at 0.01.
-        self.learning_rate = tf.train.exponential_decay(
-          0.01,                # Base learning rate.
-          self.batch * BATCH_SIZE,  # Current index into the dataset.
-          self.train_labels_node.shape[0],         # Decay step.
-          0.95,                # Decay rate.
-          staircase=True)
-        # Use simple momentum for the optimization.
-        self.optimizer = tf.train.MomentumOptimizer(self.learning_rate,0.9).minimize(self.loss, global_step=self.batch)
+        # optimizer
+        # # controls the learning rate decay.
+        # self.batch = tf.Variable(0, dtype=tf.float32)
+        # # Decay once per epoch, using an exponential schedule starting at 0.01.
+        # self.learning_rate = tf.train.exponential_decay(
+        #   0.01,                # Base learning rate.
+        #   self.batch * BATCH_SIZE,  # Current index into the dataset.
+        #   self.train_labels_node.shape[0],         # Decay step.
+        #   0.95,                # Decay rate.
+        #   staircase=True)
+        # # Use simple momentum for the optimization.
+        # self.optimizer = tf.train.MomentumOptimizer(self.learning_rate,0.9).minimize(self.loss, global_step=self.batch)
+        self.learning_rate = 0.1
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
 
         # Evaluate model
         self.prediction = tf.nn.softmax(self.logits)
@@ -239,7 +242,7 @@ class Model(object):
         hidden = tf.nn.relu(tf.matmul(reshape, self.fc1_weights) + self.fc1_biases)
         # Add a 50% dropout during training only. Dropout also scales
         # activations such that no rescaling is needed at evaluation time.
-        hidden = tf.nn.dropout(hidden, self.drop_out_rate, seed=SEED)
+        hidden = tf.nn.dropout(hidden, self.drop_out_rate)
         logits = tf.add(tf.matmul(hidden, self.fc2_weights), self.fc2_biases)
         #! self.loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.train_labels_node, logits=logits))
         return logits
@@ -274,16 +277,16 @@ class Model(object):
         # with tf.Session() as sess:
         #     sess.run(self.init)
             # logits, label, loss, acc  = self.sess.run([self.logits, self.train_labels_node, self.loss,  self.accuracy], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.5})
-            label, loss, acc, lr  = self.sess.run([self.train_labels_node, self.loss, self.accuracy,self.learning_rate], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.5})
+            label, loss, acc  = self.sess.run([self.train_labels_node, self.loss, self.accuracy], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.8})
             # logits, label, loss, acc, lr  = self.sess.run([self.logits, self.train_labels_node, self.loss, self.accuracy,self.learning_rate], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.5})
         #print "The shape is:"
         #print "logits=", logits
         #print "label=", label
-            return loss, acc, lr
+            return loss, acc
 
     def valid(self, ims, labels):
         '''TODO: Your code here.'''
-        prediction, loss, acc = self.sess.run([self.prediction, self.loss, self.accuracy], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0})
+        prediction, loss, acc = self.sess.run([self.prediction, self.loss, self.accuracy], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 1})
         return prediction, loss, acc
 
         # # loss, acc = sess.run(Model[:-1], feed_dict={x: xTe, y: yTe})
@@ -329,13 +332,14 @@ def train_wrapper(model):
     print('Initialized!')
     # Loop through training steps.
     best_accuracy = 0
-    for step in xrange(int(num_epochs * train_size) // BATCH_SIZE):
+    # for step in xrange(int(num_epochs * train_size) // BATCH_SIZE):
+    for step in xrange(10000):
         # Compute the offset of the current minibatch in the data.
         # Note that we could use better randomization across epochs.
         if not train_set.has_next_batch():
             train_set.init_epoch()
         train_data, train_labels = train_set.next_batch()
-        loss, acc, lr = model.train(train_data, train_labels)
+        loss, acc = model.train(train_data, train_labels)
         # batch
         # offset = (step * BATCH_SIZE) % (train_size - BATCH_SIZE)
         # batch_data = train_data[offset:(offset + BATCH_SIZE), ...]
@@ -356,6 +360,8 @@ def train_wrapper(model):
                 tot_acc += acc_val * len(valid_data)
                 tot_input += len(valid_data)
             acc_val = tot_acc / tot_input
+            print("tot_acc:",tot_acc)
+            print("tot_input",tot_input)
             valid_set.init_epoch()
 
             # l, lr, predictions = sess.run([loss, learning_rate, train_prediction],feed_dict=feed_dict)
@@ -363,14 +369,14 @@ def train_wrapper(model):
             start_time = time.time()
 
             print('Step %d (epoch %.2f), %.1f ms' % (step, float(step) * BATCH_SIZE / train_size, 1000 * elapsed_time / EVAL_FREQUENCY))
-            print('Minibatch loss: %.3f, learning rate: %.6f' % (loss, lr))
+            print('Minibatch loss: %.3f, learning rate: %.6f' % (loss, 0.01))
             
-            print('Minibatch accuracy: %.1f%%' % acc*100)
-            print('Validation accuracy: %.1f%%' % acc_val*100)
+            print('Minibatch accuracy: %.1f' % acc)
+            print('Validation accuracy: %.1f' % acc_val)
             if acc_val > best_accuracy:
                 best_accuracy = acc_val
                 model.save(step)
-            sys.stdout.flush()
+            # sys.stdout.flush()
 
 
         # valid_error = error_rate(self.eval_in_batches(valid_data, sess), valid_labels)
