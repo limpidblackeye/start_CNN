@@ -158,8 +158,8 @@ class Model(object):
         # define weight and bias
         self.conv1_weights = tf.Variable(tf.truncated_normal([5, 5, NUM_CHANNELS, 32], stddev=0.1, dtype=tf.float32))
         self.conv1_biases = tf.Variable(tf.random_normal([32], dtype=tf.float32))
-        self.conv2_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 32], stddev=0.1, dtype=tf.float32))
-        self.conv2_biases = tf.Variable(tf.random_normal([32], dtype=tf.float32))
+        self.conv2_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 64], stddev=0.1, dtype=tf.float32))
+        self.conv2_biases = tf.Variable(tf.random_normal([64], dtype=tf.float32))
         # self.conv3_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 64], stddev=0.1, dtype=tf.float32))
         # self.conv3_biases = tf.Variable(tf.random_normal([64], dtype=tf.float32))
  

@@ -22,7 +22,7 @@ FLAGS = tf.app.flags.FLAGS
 # mode
 tf.app.flags.DEFINE_boolean('is_training', True, 'training or testing')
 # data
-tf.app.flags.DEFINE_string('root_dir', '../data', 'data root dir')
+tf.app.flags.DEFINE_string('root_dir', '../data_fortest_10label', 'data root dir')
 tf.app.flags.DEFINE_string('dataset', 'dset1', 'dset1 or dset2')
 tf.app.flags.DEFINE_integer('n_label', 10, 'number of classes')
 # trainig
@@ -160,8 +160,8 @@ class Model(object):
         self.conv1_biases = tf.Variable(tf.random_normal([32], dtype=tf.float32))
         self.conv2_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 32], stddev=0.1, dtype=tf.float32))
         self.conv2_biases = tf.Variable(tf.random_normal([32], dtype=tf.float32))
-        # self.conv3_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 64], stddev=0.1, dtype=tf.float32))
-        # self.conv3_biases = tf.Variable(tf.random_normal([64], dtype=tf.float32))
+        self.conv3_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 64], stddev=0.1, dtype=tf.float32))
+        self.conv3_biases = tf.Variable(tf.random_normal([64], dtype=tf.float32))
  
         # fully connected, depth 512.
         self.fc1_weights = tf.Variable(tf.truncated_normal([IMAGE_SIZE // 4 * IMAGE_SIZE // 4 * 64, 512],stddev=0.1,dtype=tf.float32))
@@ -191,17 +191,17 @@ class Model(object):
         #   0.999,                # Decay rate.
         #   staircase=True)
         self.learning_rate = tf.train.piecewise_constant(
-            self.batch * BATCH_SIZE,
-            boundaries = [4000.0*BATCH_SIZE, 6000.0*BATCH_SIZE, 8000.0*BATCH_SIZE ],
-            values = [0.01, 0.001, 0.0005, 0.00001]
+            self.batch,
+            boundaries = [2000.0],
+            values = [0.0001, 0.00001]
             )
         # Use simple momentum for the optimization.
         # self.optimizer = tf.train.MomentumOptimizer(self.learning_rate,0.9).minimize(self.loss, global_step=self.batch)
         # self.learning_rate = 0.01
-        if self.batch * BATCH_SIZE<6000.0*BATCH_SIZE:
-        	self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss, global_step=self.batch)
-      	else:
-      		self.optimizer = tf.train.GradientDescentOptimizer(self.learning_rate).minimize(self.loss, global_step=self.batch)
+        if tf.greater(tf.Variable(6000.0,dtype=tf.float32),self.batch)==tf.Variable(True,dtype=tf.bool):
+            self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss, global_step=self.batch)
+        else:
+            self.optimizer = tf.train.GradientDescentOptimizer(self.learning_rate).minimize(self.loss, global_step=self.batch)
 
         # Evaluate model
         self.prediction = tf.nn.softmax(self.logits)
@@ -232,9 +232,11 @@ class Model(object):
 
         ################ define network #################
         """The Model definition."""
+
         # 2D convolution, with 'SAME' padding (i.e. the output feature map has
         # the same size as the input). Note that {strides} is a 4D array whose
         # shape matches the data layout: [image index, y, x, depth].
+        # conv1
         conv = tf.nn.conv2d(self.train_data_node,self.conv1_weights,strides=[1, 1, 1, 1],padding='SAME')
         # Bias and rectified linear non-linearity.
         relu = tf.nn.relu(tf.nn.bias_add(conv, self.conv1_biases))
@@ -242,13 +244,15 @@ class Model(object):
         # the data. Here we have a pooling window of 2, and a stride of 2.
         pool = tf.nn.max_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
         
+        # conv2
         conv = tf.nn.conv2d(pool,self.conv2_weights,strides=[1, 1, 1, 1],padding='SAME')
         relu = tf.nn.relu(tf.nn.bias_add(conv, self.conv2_biases))
         pool = tf.nn.max_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
 
-        # conv = tf.nn.conv2d(pool,self.conv3_weights,strides=[1, 1, 1, 1],padding='SAME')
-        # relu = tf.nn.relu(tf.nn.bias_add(conv, self.conv3_biases))
-        # pool = tf.nn.max_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
+        # conv3
+        conv = tf.nn.conv2d(pool,self.conv3_weights,strides=[1, 1, 1, 1],padding='SAME')
+        relu = tf.nn.relu(tf.nn.bias_add(conv, self.conv3_biases))
+        pool = tf.nn.max_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
 
         # Reshape the feature map cuboid into a 2D matrix to feed it to the
         # fully connected layers.
@@ -389,8 +393,8 @@ def train_wrapper(model):
             print('Step %d (epoch %.2f), %.1f ms' % (step, float(step) * BATCH_SIZE / train_size, 1000 * elapsed_time / EVAL_FREQUENCY))
             print('Minibatch loss: %.3f, learning rate: %.6f' % (loss, lr))
             
-            print('Minibatch accuracy: %.1f' % acc)
-            print('Validation accuracy: %.1f' % acc_val)
+            print('Minibatch accuracy: %.3f' % acc)
+            print('Validation accuracy: %.3f' % acc_val)
             if acc_val > best_accuracy:
                 best_accuracy = acc_val
                 model.save(step)
