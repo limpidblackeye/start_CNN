@@ -288,7 +288,7 @@ class Model(object):
     def load(self):
         print('load model:', FLAGS.my_best_model)
         self.saver = tf.train.import_meta_graph(FLAGS.my_best_model)
-        self.saver.restore(self.sess, tf.train.latest_checkpoint('./'))
+        self.saver.restore(self.sess, tf.train.latest_checkpoint(FLAGS.save_dir))
 
 #################################
 
