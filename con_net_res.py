@@ -156,11 +156,11 @@ class Model(object):
         self.drop_out_rate = tf.placeholder(tf.float32)
 
         # define weight and bias
-        self.conv1_weights = tf.Variable(tf.truncated_normal([5, 5, NUM_CHANNELS, 32], stddev=0.0001, dtype=tf.float32))
+        self.conv1_weights = tf.Variable(tf.truncated_normal([5, 5, NUM_CHANNELS, 32], stddev=0.001, dtype=tf.float32))
         self.conv1_biases = tf.Variable(tf.random_normal([32], dtype=tf.float32))
-        self.conv2_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 32], stddev=0.01, dtype=tf.float32))
+        self.conv2_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 32], stddev=0.1, dtype=tf.float32))
         self.conv2_biases = tf.Variable(tf.random_normal([32], dtype=tf.float32))
-        self.conv3_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 64], stddev=0.01, dtype=tf.float32))
+        self.conv3_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 64], stddev=0.1, dtype=tf.float32))
         self.conv3_biases = tf.Variable(tf.random_normal([64], dtype=tf.float32))
  
         # fully connected, depth 512.
@@ -192,8 +192,8 @@ class Model(object):
         #   staircase=True)
         self.learning_rate = tf.train.piecewise_constant(
             self.batch,
-            boundaries = [2000.0],
-            values = [0.0001, 0.00001]
+            boundaries = [2000.0,2001.0,3000.0,4000.0],
+            values = [0.001,0.005,0.001,0.0001,0.00001]
             )
         # Use simple momentum for the optimization.
         # self.optimizer = tf.train.MomentumOptimizer(self.learning_rate,0.9).minimize(self.loss, global_step=self.batch)
