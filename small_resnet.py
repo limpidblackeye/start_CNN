@@ -379,7 +379,7 @@ def train_wrapper(model):
                 best_accuracy = acc_val
                 model.save(step)
             # sys.stdout.flush()
-            print('Final validation best_accuracy:%.3f' % acc_val)
+    print('Final validation best_accuracy:%.3f' % best_accuracy)
    
 def test_wrapper(model):
     pass
