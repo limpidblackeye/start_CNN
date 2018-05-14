@@ -29,7 +29,7 @@ tf.app.flags.DEFINE_integer('n_label', 65, 'number of classes')
 tf.app.flags.DEFINE_integer('batch_size', 16, 'mini batch for a training iter')
 tf.app.flags.DEFINE_string('save_dir', '../checkpoints_conv_net_3layers', 'dir to the trained model')
 # test
-tf.app.flags.DEFINE_string('my_best_model', '../checkpoints_conv_net_3layers/model.ckpt', 'for test')
+tf.app.flags.DEFINE_string('my_best_model', '../checkpoints_conv_net_3layers/model.ckpt-8100', 'for test')
 
 '''TODO: you may add more configs such as base learning rate, max_iteration,
 display_iteration, valid_iteration and etc. '''
@@ -350,7 +350,6 @@ def test_wrapper(model):
     test_set = DataSet(FLAGS.root_dir, FLAGS.dataset, 'test',
                        FLAGS.batch_size, FLAGS.n_label,
                        data_aug=False, shuffle=False)
-    test_data, test_labels = test_set.load_data()
     '''TODO: Your code here.'''
         # load checkpoints
     with tf.Session() as sess:
