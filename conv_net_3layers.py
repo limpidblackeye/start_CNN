@@ -159,23 +159,13 @@ class Model(object):
         self.conv2_beta = tf.Variable(tf.zeros([32]))
         self.conv2_gamma = tf.Variable(tf.truncated_normal([32],stddev=0.1))
 
-        self.conv2_res_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 32], stddev=0.1, dtype=tf.float32))
-        self.conv2_res_beta = tf.Variable(tf.zeros([32]))
-        self.conv2_res_gamma = tf.Variable(tf.truncated_normal([32],stddev=0.1))
-
         self.conv3_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 64], stddev=0.1, dtype=tf.float32))
         self.conv3_biases = tf.Variable(tf.random_normal([64], dtype=tf.float32))
         self.conv3_beta = tf.Variable(tf.zeros([64]))
         self.conv3_gamma = tf.Variable(tf.truncated_normal([64],stddev=0.1))
 
-
-        self.conv4_weights = tf.Variable(tf.truncated_normal([5, 5, 64, 128], stddev=0.1, dtype=tf.float32))
-        self.conv4_biases = tf.Variable(tf.random_normal([128], dtype=tf.float32))
-        self.conv4_beta = tf.Variable(tf.zeros([128]))
-        self.conv4_gamma = tf.Variable(tf.truncated_normal([128],stddev=0.1))
-
         # fully connected, depth 512.
-        self.fc1_weights = tf.Variable(tf.truncated_normal([IMAGE_SIZE // 4 * IMAGE_SIZE // 4 * 64 // 2, 1024],stddev=0.1,dtype=tf.float32))
+        self.fc1_weights = tf.Variable(tf.truncated_normal([IMAGE_SIZE // 4 * IMAGE_SIZE // 4 * 64 // 8, 1024],stddev=0.1,dtype=tf.float32))
         self.fc1_biases = tf.Variable(tf.random_normal([1024], dtype=tf.float32))
         self.fc2_weights = tf.Variable(tf.truncated_normal([1024, NUM_LABELS],stddev=0.1,dtype=tf.float32))
         self.fc2_biases = tf.Variable(tf.random_normal([NUM_LABELS], dtype=tf.float32))
@@ -229,57 +219,7 @@ class Model(object):
         self.sess = tf.Session(config=self.configProt)
         self.sess.run(self.init)
 
-
     def construct_model(self):
-        '''TODO: Your code here.'''
-
-        ################ declare variables #################
-        # This is where training samples and labels are fed to the graph.
-
-        # The variables below hold all the trainable weights. They are passed an
-        # initial value which will be assigned when we call:
-        # {tf.global_variables_initializer().run()}
-        # 5x5 filter, depth 32.
-        #################################
-
-        # # residual_block, honor: https://github.com/xuyuwei/resnet-tf/blob/master/resnet.py
-        # def conv_layer(inpt, filter_shape, stride):
-        #     out_channels = filter_shape[3]
-
-        #     filter_ = tf.Variable(tf.truncated_normal(filter_shape, stddev=0.1))
-        #     conv = tf.nn.conv2d(inpt, filter=filter_, strides=[1, stride, stride, 1], padding="SAME")
-        #     mean, var = tf.nn.moments(conv, axes=[0,1,2])
-        #     beta = tf.Variable(tf.zeros([out_channels]), name="beta")
-        #     gamma = tf.Variable(tf.truncated_normal([out_channels],stddev=0.1), name="gamma")
-            
-        #     batch_norm = tf.nn.batch_norm_with_global_normalization(
-        #         conv, mean, var, beta, gamma, 0.001,
-        #         scale_after_normalization=True)
-        #     out = tf.nn.relu(batch_norm)
-        #     return out
-
-        # def residual_block(inpt,input_depth, output_depth, down_sample, projection=False):
-        #     # input_depth = inpt.get_shape().as_list()[3]
-        #     if down_sample:
-        #         filter_ = [1,2,2,1]
-        #         inpt = tf.nn.max_pool(inpt, ksize=filter_, strides=filter_, padding='SAME')
-
-        #     conv1 = conv_layer(inpt, [3, 3, input_depth, output_depth], 1)
-        #     conv2 = conv_layer(conv1, [3, 3, output_depth, output_depth], 1)
-
-        #     if input_depth != output_depth:
-        #         if projection:
-        #             # Option B: Projection shortcut
-        #             input_layer = conv_layer(inpt, [1, 1, input_depth, output_depth], 2)
-        #         else:
-        #             # Option A: Zero-padding
-        #             input_layer = tf.pad(inpt, [[0,0], [0,0], [0,0], [0, output_depth - input_depth]])
-        #     else:
-        #         input_layer = inpt
-
-        #     res = conv2 + input_layer
-        #     return res
-
         ################ define network #################
         """The Model definition."""
 
@@ -296,10 +236,6 @@ class Model(object):
         relu1 = tf.nn.relu(tf.nn.bias_add(batch_norm1, self.conv1_biases))
         pool1 = tf.nn.max_pool(relu1,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
     
-        # # res block        
-        # conv_res_x = residual_block(pool,32, 32, False)
-        # conv_res = residual_block(conv_res_x, 32, 32, False)
-
         # conv2
         conv2 = tf.nn.conv2d(pool1,self.conv2_weights,strides=[1, 1, 1, 1],padding='SAME')
         mean2, var2 = tf.nn.moments(conv2, axes=[0,1,2])
@@ -310,17 +246,8 @@ class Model(object):
         pool2 = tf.nn.max_pool(relu2,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
         # pool = tf.nn.avg_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
 
-        # res from con1 to conv2
-        conv2_res = tf.nn.conv2d(relu2,self.conv2_res_weights,strides=[1, 1, 1, 1],padding='SAME')
-        mean2_res, var2_res = tf.nn.moments(conv2_res, axes=[0,1,2])
-        batch_norm2_res = tf.nn.batch_norm_with_global_normalization(
-            conv2_res, mean2_res, var2_res, self.conv2_res_beta, self.conv2_res_gamma, 0.001,
-            scale_after_normalization=True)
-        pool1_pad = tf.pad(pool1, [[0,0], [0,0], [0,0], [0, 32 - 16]])
-        conv2_res_out = conv2_res + pool1_pad
-
         # conv3
-        conv3 = tf.nn.conv2d(conv2_res_out,self.conv3_weights,strides=[1, 1, 1, 1],padding='SAME')
+        conv3 = tf.nn.conv2d(pool2,self.conv3_weights,strides=[1, 1, 1, 1],padding='SAME')
         mean3, var3 = tf.nn.moments(conv3, axes=[0,1,2])
         batch_norm3 = tf.nn.batch_norm_with_global_normalization(
             conv3, mean3, var3 , self.conv3_beta, self.conv3_gamma, 0.001,
@@ -329,80 +256,26 @@ class Model(object):
         pool3 = tf.nn.max_pool(relu3,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
         # pool = tf.nn.avg_pool(relu3,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
 
-        # conv4
-        conv4 = tf.nn.conv2d(pool3,self.conv4_weights,strides=[1, 1, 1, 1],padding='SAME')
-        mean4, var4 = tf.nn.moments(conv4, axes=[0,1,2])
-        batch_norm4 = tf.nn.batch_norm_with_global_normalization(
-            conv4, mean4, var4, self.conv4_beta, self.conv4_gamma, 0.001,
-            scale_after_normalization=True)
-        relu4 = tf.nn.relu(tf.nn.bias_add(batch_norm4, self.conv4_biases))
-        pool4 = tf.nn.max_pool(relu4, ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
-        # pool = tf.nn.avg_pool(relu4,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
-
         # Reshape the feature map cuboid into a 2D matrix to feed it to the
         # fully connected layers.
         # pool_shape = pool.get_shape().as_list()
         # reshape = tf.reshape(pool,[pool_shape[0], pool_shape[1] * pool_shape[2] * pool_shape[3]])
-        reshape = tf.contrib.layers.flatten(pool4)
-        # Fully connected layer. Note that the '+' operation automatically
-        # broadcasts the biases.
+        reshape = tf.contrib.layers.flatten(pool3)
         hidden = tf.nn.relu(tf.matmul(reshape, self.fc1_weights) + self.fc1_biases)
-        # Add a 50% dropout during training only. Dropout also scales
-        # activations such that no rescaling is needed at evaluation time.
         hidden = tf.nn.dropout(hidden, self.drop_out_rate)
         logits = tf.add(tf.matmul(hidden, self.fc2_weights), self.fc2_biases)
-        #! self.loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.train_labels_node, logits=logits))
         return logits
 
-    # def eval_in_batches(data, sess):
-    #     """Get all predictions for a dataset by running it in small batches."""
-    #     size = data.shape[0]
-    #     if size < EVAL_BATCH_SIZE:
-    #         raise ValueError("batch size for evals larger than dataset: %d" % size)
-    #     predictions = np.ndarray(shape=(size, NUM_LABELS), dtype=np.float32)
-    #     for begin in xrange(0, size, EVAL_BATCH_SIZE):
-    #         end = begin + EVAL_BATCH_SIZE
-    #         if end <= size:
-    #             predictions[begin:end, :] = sess.run(eval_prediction,feed_dict={self.eval_data: data[begin:end, ...]})
-    #         else:
-    #             batch_predictions = sess.run(eval_prediction,feed_dict={self.eval_data: data[-EVAL_BATCH_SIZE:, ...]})
-    #             predictions[begin:, :] = batch_predictions[begin - size:, :]
-    #     return predictions
-
     def train(self, ims, labels):
-        '''TODO: Your code here.'''
-        # Optimizer: set up a variable that's incremented once per batch and
-
-        # Small utility function to evaluate a dataset by feeding batches of data to
-        # {eval_data} and pulling the results from {eval_predictions}.
-        # Saves memory and enables this to run on smaller GPUs.
-        # print("ims.shape:",ims.shape)
-        # print("labels.shape:",labels.shape)
-        # print("train_data_node.shape",self.train_data_node.shape)
-        # print("train_labels_node.shape",self.train_labels_node.shape)
         with tf.device('/gpu:0'):
         # with tf.Session() as sess:
         #     sess.run(self.init)
-            # logits, label, loss, acc  = self.sess.run([self.logits, self.train_labels_node, self.loss,  self.accuracy], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.5})
             logit, label, loss, opti, acc, lr  = self.sess.run([self.logits,self.train_labels_node, self.loss, self.optimizer,  self.accuracy, self.learning_rate], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.8})
-            # logits, label, loss, acc, lr  = self.sess.run([self.logits, self.train_labels_node, self.loss, self.accuracy,self.learning_rate], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.5})
-        #print "The shape is:"
-        #print "logits=", logits
-        #print "label=", label
             return loss, acc, lr
 
     def valid(self, ims, labels):
-        '''TODO: Your code here.'''
         prediction, loss, acc = self.sess.run([self.prediction, self.loss, self.accuracy], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 1})
         return prediction, loss, acc
-
-        # # loss, acc = sess.run(Model[:-1], feed_dict={x: xTe, y: yTe})
-        # # print final result
-        # test_error = error_rate(self.eval_in_batches(ims, sess), labels)
-        # print('Test error: %.1f%%' % test_error)
-        # # Predictions for the test and validation, which we'll compute less often.
-        # predictions = tf.nn.softmax(model(self.eval_data))
-        # return self.predictions
 
     def save(self, itr):
         checkpoint_path = os.path.join(FLAGS.save_dir, 'model.ckpt')
@@ -425,9 +298,6 @@ def train_wrapper(model):
     valid_set = DataSet(FLAGS.root_dir, FLAGS.dataset, 'valid',
                         FLAGS.batch_size, FLAGS.n_label,
                         data_aug=False, shuffle=False)
-    '''create a tf session for training and validation
-    TODO: to run your model, you may call model.train(), model.save(), model.valid()'''
-    # declare model
 
     # Create a local session to run the training.
     num_epochs = NUM_EPOCHS
@@ -447,16 +317,6 @@ def train_wrapper(model):
             train_set.init_epoch()
         train_data, train_labels = train_set.next_batch()
         loss, acc, lr = model.train(train_data, train_labels)
-        # print("!!!fc2_biases:",fc2_biases)
-        # batch
-        # offset = (step * BATCH_SIZE) % (train_size - BATCH_SIZE)
-        # batch_data = train_data[offset:(offset + BATCH_SIZE), ...]
-        # batch_labels = train_labels[offset:(offset + BATCH_SIZE)]
-        # This dictionary maps the batch data (as a np array) to the
-    
-        # # Run the optimizer to update weights.
-        # feed_dict = {self.train_data_node: batch_data, self.train_labels_node: batch_labels}
-        # sess.run(optimizer, feed_dict=feed_dict)
 
         # print some extra information once reach the evaluation frequency
         if step % EVAL_FREQUENCY == 0:
@@ -484,33 +344,23 @@ def train_wrapper(model):
             if acc_val > best_accuracy:
                 best_accuracy = acc_val
                 model.save(step)
-            # sys.stdout.flush()
 
-
-        # valid_error = error_rate(self.eval_in_batches(valid_data, sess), valid_labels)
-        # print('Validation error: %.1f%%' % valid_error)
- 
+def test_wrapper(model):
+    # '''Finish this function so that TA could test your code easily.'''    
+    # test_set = DataSet(FLAGS.root_dir, FLAGS.dataset, 'test',
+    #                    FLAGS.batch_size, FLAGS.n_label,
+    #                    data_aug=False, shuffle=False)
+    # test_data, test_labels = test_set.load_data()
+    # '''TODO: Your code here.'''
+    #     # load checkpoints
     # with tf.Session() as sess:
     #     model=Model()
-    #     model.train(train_data, train_labels)
-    #     model.valid(valid_data, valid_labels)
-   
-def test_wrapper(model):
-    '''Finish this function so that TA could test your code easily.'''    
-    test_set = DataSet(FLAGS.root_dir, FLAGS.dataset, 'test',
-                       FLAGS.batch_size, FLAGS.n_label,
-                       data_aug=False, shuffle=False)
-    test_data, test_labels = test_set.load_data()
-    '''TODO: Your code here.'''
-        # load checkpoints
-    with tf.Session() as sess:
-        model=Model()
-        if model.load(model.checkpoint_path, model.dataset_name):
-            print("[*] SUCCESS to load model for %s." % model.dataset_name)
-        else:
-            print("[!] Failed to load model for %s." % model.dataset_name)
-            sys.exit(1)
-        model.valid(test_data, test_labels)
+    #     if model.load(model.checkpoint_path, model.dataset_name):
+    #         print("[*] SUCCESS to load model for %s." % model.dataset_name)
+    #     else:
+    #         print("[!] Failed to load model for %s." % model.dataset_name)
+    #         sys.exit(1)
+    #     model.valid(test_data, test_labels)
 
 def main(argv=None):
     print('Initializing models')
