@@ -39,7 +39,7 @@ display_iteration, valid_iteration and etc. '''
 IMAGE_SIZE = 224
 NUM_CHANNELS = 3
 PIXEL_DEPTH = 255
-NUM_LABELS = 10
+NUM_LABELS = FLAGS.n_label
 VALIDATION_SIZE = 5000  # Size of the validation set.
 # SEED = None # 66478  # Set to None for random seed.
 BATCH_SIZE = 4
@@ -156,15 +156,15 @@ class Model(object):
         self.drop_out_rate = tf.placeholder(tf.float32)
 
         # define weight and bias
-        self.conv1_weights = tf.Variable(tf.truncated_normal([5, 5, NUM_CHANNELS, 32], stddev=0.1, dtype=tf.float32))
+        self.conv1_weights = tf.Variable(tf.truncated_normal([5, 5, NUM_CHANNELS, 32], stddev=0.0001, dtype=tf.float32))
         self.conv1_biases = tf.Variable(tf.random_normal([32], dtype=tf.float32))
-        self.conv2_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 32], stddev=0.1, dtype=tf.float32))
+        self.conv2_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 32], stddev=0.01, dtype=tf.float32))
         self.conv2_biases = tf.Variable(tf.random_normal([32], dtype=tf.float32))
-        self.conv3_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 64], stddev=0.1, dtype=tf.float32))
+        self.conv3_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 64], stddev=0.01, dtype=tf.float32))
         self.conv3_biases = tf.Variable(tf.random_normal([64], dtype=tf.float32))
  
         # fully connected, depth 512.
-        self.fc1_weights = tf.Variable(tf.truncated_normal([IMAGE_SIZE // 4 * IMAGE_SIZE // 4 * 64, 512],stddev=0.1,dtype=tf.float32))
+        self.fc1_weights = tf.Variable(tf.truncated_normal([IMAGE_SIZE // 4 * IMAGE_SIZE // 4 * 64 // 4, 512],stddev=0.1,dtype=tf.float32))
         self.fc1_biases = tf.Variable(tf.random_normal([512], dtype=tf.float32))
         self.fc2_weights = tf.Variable(tf.truncated_normal([512, NUM_LABELS],stddev=0.1,dtype=tf.float32))
         self.fc2_biases = tf.Variable(tf.random_normal([NUM_LABELS], dtype=tf.float32))
@@ -248,11 +248,13 @@ class Model(object):
         conv = tf.nn.conv2d(pool,self.conv2_weights,strides=[1, 1, 1, 1],padding='SAME')
         relu = tf.nn.relu(tf.nn.bias_add(conv, self.conv2_biases))
         pool = tf.nn.max_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
+        # pool = tf.nn.avg_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
 
         # conv3
         conv = tf.nn.conv2d(pool,self.conv3_weights,strides=[1, 1, 1, 1],padding='SAME')
         relu = tf.nn.relu(tf.nn.bias_add(conv, self.conv3_biases))
-        pool = tf.nn.max_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
+        pool = tf.nn.avg_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
+        # pool = tf.nn.avg_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
 
         # Reshape the feature map cuboid into a 2D matrix to feed it to the
         # fully connected layers.
