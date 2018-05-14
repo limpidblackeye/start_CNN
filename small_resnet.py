@@ -387,23 +387,21 @@ def test_wrapper(model):
                        data_aug=False, shuffle=False)
     '''TODO: Your code here.'''
         # load checkpoints
-    with tf.Session() as sess:
-        model=Model()
-        if model.load():
-            print("[*] SUCCESS to load model")
-        else:
-            print("[!] Failed to load model!")
-            sys.exit(1)
-        tot_acc = 0
-        tot_input = 0
-        while test_set.has_next_batch():
-            test_data, test_labels = test_set.next_batch()
-            _, loss_val, acc_val = model.valid(test_data, test_labels)
-            tot_acc += acc_val * len(test_data)
-            tot_input += len(test_data)
-        acc_val = tot_acc / tot_input
-        print("tot_acc:",tot_acc)
-        print("tot_input",tot_input)
+    if model.load():
+        print("[*] SUCCESS to load model")
+    else:
+        print("[!] Failed to load model!")
+        sys.exit(1)
+    tot_acc = 0
+    tot_input = 0
+    while test_set.has_next_batch():
+        test_data, test_labels = test_set.next_batch()
+        _, loss_val, acc_val = model.valid(test_data, test_labels)
+        tot_acc += acc_val * len(test_data)
+        tot_input += len(test_data)
+    acc_val = tot_acc / tot_input
+    print("tot_acc:",tot_acc)
+    print("tot_input",tot_input)
 
 def main(argv=None):
     print('Initializing models')
