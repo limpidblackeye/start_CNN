@@ -166,9 +166,9 @@ class Model(object):
         self.conv4_biases = tf.Variable(tf.random_normal([128], dtype=tf.float32))
  
         # fully connected, depth 512.
-        self.fc1_weights = tf.Variable(tf.truncated_normal([IMAGE_SIZE // 4 * IMAGE_SIZE // 4 * 64 // 8, 512],stddev=0.1,dtype=tf.float32))
-        self.fc1_biases = tf.Variable(tf.random_normal([512], dtype=tf.float32))
-        self.fc2_weights = tf.Variable(tf.truncated_normal([512, NUM_LABELS],stddev=0.1,dtype=tf.float32))
+        self.fc1_weights = tf.Variable(tf.truncated_normal([IMAGE_SIZE // 4 * IMAGE_SIZE // 4 * 64 // 8, 1024],stddev=0.1,dtype=tf.float32))
+        self.fc1_biases = tf.Variable(tf.random_normal([1024], dtype=tf.float32))
+        self.fc2_weights = tf.Variable(tf.truncated_normal([1024, NUM_LABELS],stddev=0.1,dtype=tf.float32))
         self.fc2_biases = tf.Variable(tf.random_normal([NUM_LABELS], dtype=tf.float32))
 
         # Construct model
