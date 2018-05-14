@@ -27,7 +27,7 @@ tf.app.flags.DEFINE_string('dataset', 'dset1', 'dset1 or dset2')
 tf.app.flags.DEFINE_integer('n_label', 65, 'number of classes')
 # trainig
 tf.app.flags.DEFINE_integer('batch_size', 16, 'mini batch for a training iter')
-tf.app.flags.DEFINE_string('save_dir', '../checkpoints_conv_net_3layers', 'dir to the trained model')
+tf.app.flags.DEFINE_string('save_dir', '../checkpoints_conv_net_3layers/', 'dir to the trained model')
 # test
 tf.app.flags.DEFINE_string('my_best_model', '../checkpoints_conv_net_3layers/model.ckpt-8100.meta', 'for test')
 
