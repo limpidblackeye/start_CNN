@@ -237,11 +237,11 @@ class Model(object):
         def conv_layer(inpt, filter_shape, stride):
             out_channels = filter_shape[3]
 
-            filter_ = weight_variable(filter_shape)
+            filter_ = tf.Variable(tf.truncated_normal(filter_shape, stddev=0.1))
             conv = tf.nn.conv2d(inpt, filter=filter_, strides=[1, stride, stride, 1], padding="SAME")
             mean, var = tf.nn.moments(conv, axes=[0,1,2])
             beta = tf.Variable(tf.zeros([out_channels]), name="beta")
-            gamma = weight_variable([out_channels], name="gamma")
+            gamma = tf.Variable(tf.truncated_normal([out_channels],stddev=0.1), name="gamma")
             
             batch_norm = tf.nn.batch_norm_with_global_normalization(
                 conv, mean, var, beta, gamma, 0.001,
