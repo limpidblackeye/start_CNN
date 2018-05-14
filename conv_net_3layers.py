@@ -267,7 +267,7 @@ class Model(object):
         return logits
 
     def train(self, ims, labels):
-        with tf.device('/gpu:0'):
+        with tf.device('/gpu:5'):
         # with tf.Session() as sess:
         #     sess.run(self.init)
             logit, label, loss, opti, acc, lr  = self.sess.run([self.logits,self.train_labels_node, self.loss, self.optimizer,  self.accuracy, self.learning_rate], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.8})

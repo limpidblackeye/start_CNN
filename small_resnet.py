@@ -380,7 +380,7 @@ class Model(object):
         # print("labels.shape:",labels.shape)
         # print("train_data_node.shape",self.train_data_node.shape)
         # print("train_labels_node.shape",self.train_labels_node.shape)
-        with tf.device('/gpu:0'):
+        with tf.device('/gpu:5'):
         # with tf.Session() as sess:
         #     sess.run(self.init)
             # logits, label, loss, acc  = self.sess.run([self.logits, self.train_labels_node, self.loss,  self.accuracy], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.5})
