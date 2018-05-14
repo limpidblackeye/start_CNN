@@ -152,12 +152,12 @@ class Model(object):
         self.conv1_weights = tf.Variable(tf.truncated_normal([5, 5, NUM_CHANNELS, 16], stddev=0.001, dtype=tf.float32))
         self.conv1_biases = tf.Variable(tf.random_normal([16], dtype=tf.float32))
         self.conv1_beta = tf.Variable(tf.zeros([16]))
-        self.conv1_gamma = tf.Variable(tf.truncated_normal([16],stddev=0.1))
+        self.conv1_gamma = tf.Variable(tf.truncated_normal([16],stddev=0.01))
 
         self.conv2_weights = tf.Variable(tf.truncated_normal([5, 5, 16, 32], stddev=0.1, dtype=tf.float32))
         self.conv2_biases = tf.Variable(tf.random_normal([32], dtype=tf.float32))
         self.conv2_beta = tf.Variable(tf.zeros([32]))
-        self.conv2_gamma = tf.Variable(tf.truncated_normal([32],stddev=0.1))
+        self.conv2_gamma = tf.Variable(tf.truncated_normal([32],stddev=0.01))
 
         self.conv3_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 64], stddev=0.1, dtype=tf.float32))
         self.conv3_biases = tf.Variable(tf.random_normal([64], dtype=tf.float32))
@@ -166,8 +166,8 @@ class Model(object):
 
         # fully connected, depth 512.
         self.fc1_weights = tf.Variable(tf.truncated_normal([IMAGE_SIZE // 4 * IMAGE_SIZE // 4 * 16, 512],stddev=0.1,dtype=tf.float32))
-        self.fc1_biases = tf.Variable(tf.random_normal([1024], dtype=tf.float32))
-        self.fc2_weights = tf.Variable(tf.truncated_normal([1024, NUM_LABELS],stddev=0.1,dtype=tf.float32))
+        self.fc1_biases = tf.Variable(tf.random_normal([512], dtype=tf.float32))
+        self.fc2_weights = tf.Variable(tf.truncated_normal([512, NUM_LABELS],stddev=0.1,dtype=tf.float32))
         self.fc2_biases = tf.Variable(tf.random_normal([NUM_LABELS], dtype=tf.float32))
 
         # Construct model
@@ -243,8 +243,8 @@ class Model(object):
             conv2, mean2, var2, self.conv2_beta, self.conv2_gamma, 0.001,
             scale_after_normalization=True)
         relu2 = tf.nn.relu(tf.nn.bias_add(batch_norm2, self.conv2_biases))
-        pool2 = tf.nn.max_pool(relu2,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
-        # pool = tf.nn.avg_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
+        # pool2 = tf.nn.max_pool(relu2,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
+        pool2 = tf.nn.avg_pool(relu2,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
 
         # conv3
         conv3 = tf.nn.conv2d(pool2,self.conv3_weights,strides=[1, 1, 1, 1],padding='SAME')
@@ -253,8 +253,8 @@ class Model(object):
             conv3, mean3, var3 , self.conv3_beta, self.conv3_gamma, 0.001,
             scale_after_normalization=True)
         relu3 = tf.nn.relu(tf.nn.bias_add(batch_norm3, self.conv3_biases))
-        pool3 = tf.nn.max_pool(relu3,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
-        # pool = tf.nn.avg_pool(relu3,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
+        # pool3 = tf.nn.max_pool(relu3,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
+        pool3 = tf.nn.avg_pool(relu3,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
 
         # Reshape the feature map cuboid into a 2D matrix to feed it to the
         # fully connected layers.
