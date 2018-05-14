@@ -256,8 +256,9 @@ class Model(object):
 
         # Reshape the feature map cuboid into a 2D matrix to feed it to the
         # fully connected layers.
-        pool_shape = pool.get_shape().as_list()
-        reshape = tf.reshape(pool,[pool_shape[0], pool_shape[1] * pool_shape[2] * pool_shape[3]])
+        # pool_shape = pool.get_shape().as_list()
+        # reshape = tf.reshape(pool,[pool_shape[0], pool_shape[1] * pool_shape[2] * pool_shape[3]])
+        reshape = tf.contrib.layers.flatten(pool)
         # Fully connected layer. Note that the '+' operation automatically
         # broadcasts the biases.
         hidden = tf.nn.relu(tf.matmul(reshape, self.fc1_weights) + self.fc1_biases)
