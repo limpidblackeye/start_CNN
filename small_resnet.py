@@ -25,9 +25,9 @@ tf.app.flags.DEFINE_boolean('is_training', True, 'training or testing')
 # tf.app.flags.DEFINE_string('root_dir', '../data_fortest_10label', 'data root dir')
 tf.app.flags.DEFINE_string('root_dir', '../data', 'data root dir')
 tf.app.flags.DEFINE_string('dataset', 'dset1', 'dset1 or dset2')
-tf.app.flags.DEFINE_integer('n_label', 65, 'number of classes')
+tf.app.flags.DEFINE_integer('n_label', 10, 'number of classes')
 # trainig
-tf.app.flags.DEFINE_integer('batch_size', 4, 'mini batch for a training iter')
+tf.app.flags.DEFINE_integer('batch_size', 8, 'mini batch for a training iter')
 tf.app.flags.DEFINE_string('save_dir', './checkpoints', 'dir to the trained model')
 # test
 tf.app.flags.DEFINE_string('my_best_model', './checkpoints/model.ckpt-1000', 'for test')
@@ -91,10 +91,7 @@ class DataSet(object):
             imgs_name = os.listdir(os.path.join(self.data_dir, _label_dir))
             imgs_name.sort()
             for img_name in imgs_name:
-                # im_ar = cv2.imread(os.path.join(self.data_dir, _label_dir, img_name))
-                # im_ar = cv2.cvtColor(im_ar, cv2.COLOR_BGR2RGB)
                 im_ar = imread(os.path.join(self.data_dir, _label_dir, img_name))
-                # print(os.path.join(self.data_dir, _label_dir, img_name))
                 im_ar = np.asarray(im_ar)
                 im_ar = self.preprocess(im_ar)
                 xs.append(im_ar)
@@ -103,8 +100,6 @@ class DataSet(object):
 
     def preprocess(self, im_ar):
         '''Resize raw image to a fixed size, and scale the pixel intensities.'''
-        '''TODO: you may add data augmentation methods.'''
-        # im_ar = cv2.resize(im_ar, (224, 224))
         im_ar = resize(im_ar, (224, 224), mode='constant', preserve_range = True)
         im_ar = im_ar / 255.0
         return im_ar
@@ -120,8 +115,6 @@ class DataSet(object):
             x_batch.append(self.xs[self.indices[self.cur_index+i]])
             y_batch.append(self.ys[self.indices[self.cur_index+i]])
         self.cur_index += self.batch_size
-        # print("np.asarray(x_batch).shape:",np.asarray(x_batch).shape)
-        # print("np.asarray(y_batch).shape:",np.asarray(y_batch).shape)
         return np.asarray(x_batch), np.asarray(y_batch)
 
     def has_next_batch(self):
@@ -158,13 +151,29 @@ class Model(object):
         # define weight and bias
         self.conv1_weights = tf.Variable(tf.truncated_normal([5, 5, NUM_CHANNELS, 16], stddev=0.001, dtype=tf.float32))
         self.conv1_biases = tf.Variable(tf.random_normal([16], dtype=tf.float32))
+        self.conv1_beta = tf.Variable(tf.zeros([16]))
+        self.conv1_gamma = tf.Variable(tf.truncated_normal([16],stddev=0.1))
+
         self.conv2_weights = tf.Variable(tf.truncated_normal([5, 5, 16, 32], stddev=0.1, dtype=tf.float32))
         self.conv2_biases = tf.Variable(tf.random_normal([32], dtype=tf.float32))
+        self.conv2_beta = tf.Variable(tf.zeros([32]))
+        self.conv2_gamma = tf.Variable(tf.truncated_normal([32],stddev=0.1))
+
+        self.conv2_res_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 32], stddev=0.1, dtype=tf.float32))
+        self.conv2_res_beta = tf.Variable(tf.zeros([32]))
+        self.conv2_res_gamma = tf.Variable(tf.truncated_normal([32],stddev=0.1))
+
         self.conv3_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 64], stddev=0.1, dtype=tf.float32))
         self.conv3_biases = tf.Variable(tf.random_normal([64], dtype=tf.float32))
+        self.conv3_beta = tf.Variable(tf.zeros([64]))
+        self.conv3_gamma = tf.Variable(tf.truncated_normal([64],stddev=0.1))
+
+
         self.conv4_weights = tf.Variable(tf.truncated_normal([5, 5, 64, 128], stddev=0.1, dtype=tf.float32))
         self.conv4_biases = tf.Variable(tf.random_normal([128], dtype=tf.float32))
- 
+        self.conv4_beta = tf.Variable(tf.zeros([128]))
+        self.conv4_gamma = tf.Variable(tf.truncated_normal([128],stddev=0.1))
+
         # fully connected, depth 512.
         self.fc1_weights = tf.Variable(tf.truncated_normal([IMAGE_SIZE // 4 * IMAGE_SIZE // 4 * 64 // 8, 1024],stddev=0.1,dtype=tf.float32))
         self.fc1_biases = tf.Variable(tf.random_normal([1024], dtype=tf.float32))
@@ -233,43 +242,43 @@ class Model(object):
         # 5x5 filter, depth 32.
         #################################
 
-        # residual_block, honor: https://github.com/xuyuwei/resnet-tf/blob/master/resnet.py
-        def conv_layer(inpt, filter_shape, stride):
-            out_channels = filter_shape[3]
+        # # residual_block, honor: https://github.com/xuyuwei/resnet-tf/blob/master/resnet.py
+        # def conv_layer(inpt, filter_shape, stride):
+        #     out_channels = filter_shape[3]
 
-            filter_ = tf.Variable(tf.truncated_normal(filter_shape, stddev=0.1))
-            conv = tf.nn.conv2d(inpt, filter=filter_, strides=[1, stride, stride, 1], padding="SAME")
-            mean, var = tf.nn.moments(conv, axes=[0,1,2])
-            beta = tf.Variable(tf.zeros([out_channels]), name="beta")
-            gamma = tf.Variable(tf.truncated_normal([out_channels],stddev=0.1), name="gamma")
+        #     filter_ = tf.Variable(tf.truncated_normal(filter_shape, stddev=0.1))
+        #     conv = tf.nn.conv2d(inpt, filter=filter_, strides=[1, stride, stride, 1], padding="SAME")
+        #     mean, var = tf.nn.moments(conv, axes=[0,1,2])
+        #     beta = tf.Variable(tf.zeros([out_channels]), name="beta")
+        #     gamma = tf.Variable(tf.truncated_normal([out_channels],stddev=0.1), name="gamma")
             
-            batch_norm = tf.nn.batch_norm_with_global_normalization(
-                conv, mean, var, beta, gamma, 0.001,
-                scale_after_normalization=True)
-            out = tf.nn.relu(batch_norm)
-            return out
+        #     batch_norm = tf.nn.batch_norm_with_global_normalization(
+        #         conv, mean, var, beta, gamma, 0.001,
+        #         scale_after_normalization=True)
+        #     out = tf.nn.relu(batch_norm)
+        #     return out
 
-        def residual_block(inpt,input_depth, output_depth, down_sample, projection=False):
-            # input_depth = inpt.get_shape().as_list()[3]
-            if down_sample:
-                filter_ = [1,2,2,1]
-                inpt = tf.nn.max_pool(inpt, ksize=filter_, strides=filter_, padding='SAME')
+        # def residual_block(inpt,input_depth, output_depth, down_sample, projection=False):
+        #     # input_depth = inpt.get_shape().as_list()[3]
+        #     if down_sample:
+        #         filter_ = [1,2,2,1]
+        #         inpt = tf.nn.max_pool(inpt, ksize=filter_, strides=filter_, padding='SAME')
 
-            conv1 = conv_layer(inpt, [3, 3, input_depth, output_depth], 1)
-            conv2 = conv_layer(conv1, [3, 3, output_depth, output_depth], 1)
+        #     conv1 = conv_layer(inpt, [3, 3, input_depth, output_depth], 1)
+        #     conv2 = conv_layer(conv1, [3, 3, output_depth, output_depth], 1)
 
-            if input_depth != output_depth:
-                if projection:
-                    # Option B: Projection shortcut
-                    input_layer = conv_layer(inpt, [1, 1, input_depth, output_depth], 2)
-                else:
-                    # Option A: Zero-padding
-                    input_layer = tf.pad(inpt, [[0,0], [0,0], [0,0], [0, output_depth - input_depth]])
-            else:
-                input_layer = inpt
+        #     if input_depth != output_depth:
+        #         if projection:
+        #             # Option B: Projection shortcut
+        #             input_layer = conv_layer(inpt, [1, 1, input_depth, output_depth], 2)
+        #         else:
+        #             # Option A: Zero-padding
+        #             input_layer = tf.pad(inpt, [[0,0], [0,0], [0,0], [0, output_depth - input_depth]])
+        #     else:
+        #         input_layer = inpt
 
-            res = conv2 + input_layer
-            return res
+        #     res = conv2 + input_layer
+        #     return res
 
         ################ define network #################
         """The Model definition."""
@@ -277,35 +286,58 @@ class Model(object):
         # 2D convolution, with 'SAME' padding (i.e. the output feature map has
         # the same size as the input). Note that {strides} is a 4D array whose
         # shape matches the data layout: [image index, y, x, depth].
-        # conv1
-        conv = tf.nn.conv2d(self.train_data_node,self.conv1_weights,strides=[1, 1, 1, 1],padding='SAME')
-        # Bias and rectified linear non-linearity.
-        relu = tf.nn.relu(tf.nn.bias_add(conv, self.conv1_biases))
-        # Max pooling. The kernel size spec {ksize} also follows the layout of
-        # the data. Here we have a pooling window of 2, and a stride of 2.
-        pool = tf.nn.max_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
         
-        # res block
-        conv_res_x = residual_block(pool,32, 32, False)
-        conv_res = residual_block(conv_res_x, 32, 32, False)
+        # conv1
+        conv1 = tf.nn.conv2d(self.train_data_node,self.conv1_weights,strides=[1, 1, 1, 1],padding='SAME')
+        mean1, var1 = tf.nn.moments(conv1, axes=[0,1,2])
+        batch_norm1 = tf.nn.batch_norm_with_global_normalization(
+            conv1, mean1, var1, self.conv1_beta, self.conv1_gamma, 0.001,
+            scale_after_normalization=True)
+        relu1 = tf.nn.relu(tf.nn.bias_add(batch_norm1, self.conv1_biases))
+        pool1 = tf.nn.max_pool(relu1,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
+    
+        # # res block        
+        # conv_res_x = residual_block(pool,32, 32, False)
+        # conv_res = residual_block(conv_res_x, 32, 32, False)
 
         # conv2
-        conv = tf.nn.conv2d(conv_res,self.conv2_weights,strides=[1, 1, 1, 1],padding='SAME')
-        relu = tf.nn.relu(tf.nn.bias_add(conv, self.conv2_biases))
-        pool = tf.nn.max_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
+        conv2 = tf.nn.conv2d(pool1,self.conv2_weights,strides=[1, 1, 1, 1],padding='SAME')
+        mean2, var2 = tf.nn.moments(conv2, axes=[0,1,2])
+        batch_norm2 = tf.nn.batch_norm_with_global_normalization(
+            conv2, mean, var, self.conv2_beta, self.conv2_gamma, 0.001,
+            scale_after_normalization=True)
+        relu2 = tf.nn.relu(tf.nn.bias_add(batch_norm2, self.conv2_biases))
+        pool2 = tf.nn.max_pool(relu2,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
         # pool = tf.nn.avg_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
+
+        # res from con1 to conv2
+        conv2_res = tf.nn.conv2d(pool2,self.conv2_res_weights,strides=[1, 1, 1, 1],padding='SAME')
+        mean2_res, var2_res = tf.nn.moments(conv2_res, axes=[0,1,2])
+        batch_norm2_res = tf.nn.batch_norm_with_global_normalization(
+            conv2_res, mean2_res, var2_res, self.conv2_res_beta, self.conv2_res_gamma, 0.001,
+            scale_after_normalization=True)
+        pool1_pad = tf.pad(pool1, [[0,0], [0,0], [0,0], [0, 32 - 16]])
+        conv2_res_out = conv2_res + pool1_pad
 
         # conv3
-        conv = tf.nn.conv2d(pool,self.conv3_weights,strides=[1, 1, 1, 1],padding='SAME')
-        relu = tf.nn.relu(tf.nn.bias_add(conv, self.conv3_biases))
-        pool = tf.nn.avg_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
-        # pool = tf.nn.avg_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
+        conv3 = tf.nn.conv2d(conv2_res_out,self.conv3_weights,strides=[1, 1, 1, 1],padding='SAME')
+        mean3, var3 = tf.nn.moments(conv3, axes=[0,1,2])
+        batch_norm3 = tf.nn.batch_norm_with_global_normalization(
+            conv3, mean, var, self.conv3_beta, self.conv3_gamma, 0.001,
+            scale_after_normalization=True)
+        relu3 = tf.nn.relu(tf.nn.bias_add(batch_norm3, self.conv3_biases))
+        pool3 = tf.nn.max_pool(relu3,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
+        # pool = tf.nn.avg_pool(relu3,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
 
         # conv4
-        conv = tf.nn.conv2d(pool,self.conv4_weights,strides=[1, 1, 1, 1],padding='SAME')
-        relu = tf.nn.relu(tf.nn.bias_add(conv, self.conv4_biases))
-        pool = tf.nn.avg_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
-        # pool = tf.nn.avg_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
+        conv4 = tf.nn.conv2d(pool3,self.conv4_weights,strides=[1, 1, 1, 1],padding='SAME')
+        mean4, var4 = tf.nn.moments(conv4, axes=[0,1,2])
+        batch_norm4 = tf.nn.batch_norm_with_global_normalization(
+            conv4, mean, var, self.conv4_beta, self.conv4_gamma, 0.001,
+            scale_after_normalization=True)
+        relu4 = tf.nn.relu(tf.nn.bias_add(batch_norm4, self.conv4_biases))
+        pool4 = tf.nn.max_pool(relu4,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
+        # pool = tf.nn.avg_pool(relu4,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
 
         # Reshape the feature map cuboid into a 2D matrix to feed it to the
         # fully connected layers.
