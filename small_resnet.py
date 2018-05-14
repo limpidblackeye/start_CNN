@@ -311,7 +311,7 @@ class Model(object):
         # pool = tf.nn.avg_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
 
         # res from con1 to conv2
-        conv2_res = tf.nn.conv2d(pool2,self.conv2_res_weights,strides=[1, 1, 1, 1],padding='SAME')
+        conv2_res = tf.nn.conv2d(batch_norm2,self.conv2_res_weights,strides=[1, 1, 1, 1],padding='SAME')
         mean2_res, var2_res = tf.nn.moments(conv2_res, axes=[0,1,2])
         batch_norm2_res = tf.nn.batch_norm_with_global_normalization(
             conv2_res, mean2_res, var2_res, self.conv2_res_beta, self.conv2_res_gamma, 0.001,
