@@ -34,15 +34,14 @@ tf.app.flags.DEFINE_string('my_best_model', './checkpoints/model.ckpt-1000', 'fo
 '''TODO: you may add more configs such as base learning rate, max_iteration,
 display_iteration, valid_iteration and etc. '''
 
-
 ################ some parameters #################
 IMAGE_SIZE = 224
 NUM_CHANNELS = 3
-PIXEL_DEPTH = 255
+# PIXEL_DEPTH = 255
 NUM_LABELS = FLAGS.n_label
-VALIDATION_SIZE = 5000  # Size of the validation set.
+# VALIDATION_SIZE = 5000  # Size of the validation set.
 # SEED = None # 66478  # Set to None for random seed.
-BATCH_SIZE = 4
+BATCH_SIZE = FLAGS.batch_size
 NUM_EPOCHS = 10
 EVAL_BATCH_SIZE = BATCH_SIZE
 EVAL_FREQUENCY = 100  # Number of steps between evaluations.
@@ -162,6 +161,9 @@ class Model(object):
         self.conv2_biases = tf.Variable(tf.random_normal([32], dtype=tf.float32))
         self.conv3_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 64], stddev=0.1, dtype=tf.float32))
         self.conv3_biases = tf.Variable(tf.random_normal([64], dtype=tf.float32))
+        self.conv4_weights = tf.Variable(tf.truncated_normal([5, 5, 64, 128], stddev=0.1, dtype=tf.float32))
+        self.conv4_biases = tf.Variable(tf.random_normal([128], dtype=tf.float32))
+ 
  
         # fully connected, depth 512.
         self.fc1_weights = tf.Variable(tf.truncated_normal([IMAGE_SIZE // 4 * IMAGE_SIZE // 4 * 64 // 4, 512],stddev=0.1,dtype=tf.float32))
@@ -255,6 +257,13 @@ class Model(object):
         relu = tf.nn.relu(tf.nn.bias_add(conv, self.conv3_biases))
         pool = tf.nn.avg_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
         # pool = tf.nn.avg_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
+
+        # conv4
+        conv = tf.nn.conv2d(pool,self.conv4_weights,strides=[1, 1, 1, 1],padding='SAME')
+        relu = tf.nn.relu(tf.nn.bias_add(conv, self.conv4_biases))
+        pool = tf.nn.avg_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
+        # pool = tf.nn.avg_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
+
 
         # Reshape the feature map cuboid into a 2D matrix to feed it to the
         # fully connected layers.
