@@ -29,7 +29,7 @@ tf.app.flags.DEFINE_integer('n_label', 65, 'number of classes')
 tf.app.flags.DEFINE_integer('batch_size', 16, 'mini batch for a training iter')
 tf.app.flags.DEFINE_string('save_dir', '../checkpoints_small_resnet', 'dir to the trained model')
 # test
-tf.app.flags.DEFINE_string('my_best_model', '../checkpoints_small_resnet/model.ckpt-2100', 'for test')
+tf.app.flags.DEFINE_string('my_best_model', '../checkpoints_small_resnet/model.ckpt-2100.data-00000-of-00001', 'for test')
 
 '''TODO: you may add more configs such as base learning rate, max_iteration,
 display_iteration, valid_iteration and etc. '''
