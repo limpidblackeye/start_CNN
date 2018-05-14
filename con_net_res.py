@@ -22,9 +22,10 @@ FLAGS = tf.app.flags.FLAGS
 # mode
 tf.app.flags.DEFINE_boolean('is_training', True, 'training or testing')
 # data
-tf.app.flags.DEFINE_string('root_dir', '../data_fortest_10label', 'data root dir')
+# tf.app.flags.DEFINE_string('root_dir', '../data_fortest_10label', 'data root dir')
+tf.app.flags.DEFINE_string('root_dir', '../data', 'data root dir')
 tf.app.flags.DEFINE_string('dataset', 'dset1', 'dset1 or dset2')
-tf.app.flags.DEFINE_integer('n_label', 10, 'number of classes')
+tf.app.flags.DEFINE_integer('n_label', 65, 'number of classes')
 # trainig
 tf.app.flags.DEFINE_integer('batch_size', 4, 'mini batch for a training iter')
 tf.app.flags.DEFINE_string('save_dir', './checkpoints', 'dir to the trained model')
