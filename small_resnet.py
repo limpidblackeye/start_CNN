@@ -175,7 +175,7 @@ class Model(object):
         self.conv4_gamma = tf.Variable(tf.truncated_normal([128],stddev=0.1))
 
         # fully connected, depth 512.
-        self.fc1_weights = tf.Variable(tf.truncated_normal([IMAGE_SIZE // 4 * IMAGE_SIZE // 4 * 64 // 8, 1024],stddev=0.1,dtype=tf.float32))
+        self.fc1_weights = tf.Variable(tf.truncated_normal([IMAGE_SIZE // 4 * IMAGE_SIZE // 4 * 64 // 2, 1024],stddev=0.1,dtype=tf.float32))
         self.fc1_biases = tf.Variable(tf.random_normal([1024], dtype=tf.float32))
         self.fc2_weights = tf.Variable(tf.truncated_normal([1024, NUM_LABELS],stddev=0.1,dtype=tf.float32))
         self.fc2_biases = tf.Variable(tf.random_normal([NUM_LABELS], dtype=tf.float32))
@@ -311,7 +311,7 @@ class Model(object):
         # pool = tf.nn.avg_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
 
         # res from con1 to conv2
-        conv2_res = tf.nn.conv2d(batch_norm2,self.conv2_res_weights,strides=[1, 1, 1, 1],padding='SAME')
+        conv2_res = tf.nn.conv2d(relu2,self.conv2_res_weights,strides=[1, 1, 1, 1],padding='SAME')
         mean2_res, var2_res = tf.nn.moments(conv2_res, axes=[0,1,2])
         batch_norm2_res = tf.nn.batch_norm_with_global_normalization(
             conv2_res, mean2_res, var2_res, self.conv2_res_beta, self.conv2_res_gamma, 0.001,
@@ -336,7 +336,7 @@ class Model(object):
             conv4, mean4, var4, self.conv4_beta, self.conv4_gamma, 0.001,
             scale_after_normalization=True)
         relu4 = tf.nn.relu(tf.nn.bias_add(batch_norm4, self.conv4_biases))
-        pool4 = tf.nn.max_pool(relu4,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
+        pool4 = tf.nn.max_pool(relu4, ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
         # pool = tf.nn.avg_pool(relu4,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
 
         # Reshape the feature map cuboid into a 2D matrix to feed it to the
