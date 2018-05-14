@@ -220,28 +220,6 @@ class Model(object):
         self.sess = tf.Session(config=self.configProt)
         self.sess.run(self.init)
 
-    # residual_block, honor: https://github.com/xuyuwei/resnet-tf/blob/master/resnet.py
-    def residual_block(inpt, output_depth, down_sample, projection=False):
-        input_depth = inpt.get_shape().as_list()[3]
-        if down_sample:
-            filter_ = [1,2,2,1]
-            inpt = tf.nn.max_pool(inpt, ksize=filter_, strides=filter_, padding='SAME')
-
-        conv1 = conv_layer(inpt, [3, 3, input_depth, output_depth], 1)
-        conv2 = conv_layer(conv1, [3, 3, output_depth, output_depth], 1)
-
-        if input_depth != output_depth:
-            if projection:
-                # Option B: Projection shortcut
-                input_layer = conv_layer(inpt, [1, 1, input_depth, output_depth], 2)
-            else:
-                # Option A: Zero-padding
-                input_layer = tf.pad(inpt, [[0,0], [0,0], [0,0], [0, output_depth - input_depth]])
-        else:
-            input_layer = inpt
-
-        res = conv2 + input_layer
-        return res
 
     def construct_model(self):
         '''TODO: Your code here.'''
@@ -254,6 +232,44 @@ class Model(object):
         # {tf.global_variables_initializer().run()}
         # 5x5 filter, depth 32.
         #################################
+
+        # residual_block, honor: https://github.com/xuyuwei/resnet-tf/blob/master/resnet.py
+        def conv_layer(inpt, filter_shape, stride):
+            out_channels = filter_shape[3]
+
+            filter_ = weight_variable(filter_shape)
+            conv = tf.nn.conv2d(inpt, filter=filter_, strides=[1, stride, stride, 1], padding="SAME")
+            mean, var = tf.nn.moments(conv, axes=[0,1,2])
+            beta = tf.Variable(tf.zeros([out_channels]), name="beta")
+            gamma = weight_variable([out_channels], name="gamma")
+            
+            batch_norm = tf.nn.batch_norm_with_global_normalization(
+                conv, mean, var, beta, gamma, 0.001,
+                scale_after_normalization=True)
+            out = tf.nn.relu(batch_norm)
+            return out
+
+        def residual_block(inpt,input_depth, output_depth, down_sample, projection=False):
+            # input_depth = inpt.get_shape().as_list()[3]
+            if down_sample:
+                filter_ = [1,2,2,1]
+                inpt = tf.nn.max_pool(inpt, ksize=filter_, strides=filter_, padding='SAME')
+
+            conv1 = conv_layer(inpt, [3, 3, input_depth, output_depth], 1)
+            conv2 = conv_layer(conv1, [3, 3, output_depth, output_depth], 1)
+
+            if input_depth != output_depth:
+                if projection:
+                    # Option B: Projection shortcut
+                    input_layer = conv_layer(inpt, [1, 1, input_depth, output_depth], 2)
+                else:
+                    # Option A: Zero-padding
+                    input_layer = tf.pad(inpt, [[0,0], [0,0], [0,0], [0, output_depth - input_depth]])
+            else:
+                input_layer = inpt
+
+            res = conv2 + input_layer
+            return res
 
         ################ define network #################
         """The Model definition."""
@@ -270,8 +286,8 @@ class Model(object):
         pool = tf.nn.max_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
         
         # res block
-        conv_res_x = residual_block(pool, 32, down_sample)
-        conv_res = residual_block(conv3_x, 32, False)
+        conv_res_x = residual_block(pool,32, 32, False)
+        conv_res = residual_block(conv_res_x,32, 32, False)
 
         # conv2
         conv = tf.nn.conv2d(conv_res,self.conv2_weights,strides=[1, 1, 1, 1],padding='SAME')
