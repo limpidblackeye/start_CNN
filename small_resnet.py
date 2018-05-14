@@ -304,7 +304,7 @@ class Model(object):
         conv2 = tf.nn.conv2d(pool1,self.conv2_weights,strides=[1, 1, 1, 1],padding='SAME')
         mean2, var2 = tf.nn.moments(conv2, axes=[0,1,2])
         batch_norm2 = tf.nn.batch_norm_with_global_normalization(
-            conv2, mean, var, self.conv2_beta, self.conv2_gamma, 0.001,
+            conv2, mean2, var2, self.conv2_beta, self.conv2_gamma, 0.001,
             scale_after_normalization=True)
         relu2 = tf.nn.relu(tf.nn.bias_add(batch_norm2, self.conv2_biases))
         pool2 = tf.nn.max_pool(relu2,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
@@ -323,7 +323,7 @@ class Model(object):
         conv3 = tf.nn.conv2d(conv2_res_out,self.conv3_weights,strides=[1, 1, 1, 1],padding='SAME')
         mean3, var3 = tf.nn.moments(conv3, axes=[0,1,2])
         batch_norm3 = tf.nn.batch_norm_with_global_normalization(
-            conv3, mean, var, self.conv3_beta, self.conv3_gamma, 0.001,
+            conv3, mean3, var3 , self.conv3_beta, self.conv3_gamma, 0.001,
             scale_after_normalization=True)
         relu3 = tf.nn.relu(tf.nn.bias_add(batch_norm3, self.conv3_biases))
         pool3 = tf.nn.max_pool(relu3,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
@@ -333,7 +333,7 @@ class Model(object):
         conv4 = tf.nn.conv2d(pool3,self.conv4_weights,strides=[1, 1, 1, 1],padding='SAME')
         mean4, var4 = tf.nn.moments(conv4, axes=[0,1,2])
         batch_norm4 = tf.nn.batch_norm_with_global_normalization(
-            conv4, mean, var, self.conv4_beta, self.conv4_gamma, 0.001,
+            conv4, mean4, var4, self.conv4_beta, self.conv4_gamma, 0.001,
             scale_after_normalization=True)
         relu4 = tf.nn.relu(tf.nn.bias_add(batch_norm4, self.conv4_biases))
         pool4 = tf.nn.max_pool(relu4,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
