@@ -6,12 +6,15 @@ from PIL import Image
 import numpy as np
 import tensorflow as tf
 
+from six.moves import urllib
+from six.moves import xrange 
+
 # configs
 FLAGS = tf.app.flags.FLAGS
 # mode
 tf.app.flags.DEFINE_boolean('is_training', True, 'training or testing')
 # data
-tf.app.flags.DEFINE_string('root_dir', './datasets/homework', 'data root dir')
+tf.app.flags.DEFINE_string('root_dir', '../data', 'data root dir')
 tf.app.flags.DEFINE_string('dataset', 'dset1', 'dset1 or dset2')
 tf.app.flags.DEFINE_integer('n_label', 65, 'number of classes')
 # trainig
@@ -24,7 +27,7 @@ tf.app.flags.DEFINE_float("learning_rate", 0.01, "The learning rate")
 '''TODO: you may add more configs such as base learning rate, max_iteration,
 display_iteration, valid_iteration and etc. '''
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 class DataSet(object):
     '''

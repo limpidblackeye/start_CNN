@@ -198,7 +198,10 @@ class Model(object):
         # Use simple momentum for the optimization.
         # self.optimizer = tf.train.MomentumOptimizer(self.learning_rate,0.9).minimize(self.loss, global_step=self.batch)
         # self.learning_rate = 0.01
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss, global_step=self.batch)
+        if self.batch * BATCH_SIZE<6000.0*BATCH_SIZE:
+        	self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss, global_step=self.batch)
+      	else:
+      		self.optimizer = tf.train.GradientDescentOptimizer(self.learning_rate)
 
         # Evaluate model
         self.prediction = tf.nn.softmax(self.logits)
