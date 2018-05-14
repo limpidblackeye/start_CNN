@@ -195,7 +195,7 @@ class Model(object):
         self.learning_rate = tf.train.piecewise_constant(
             self.batch,
             boundaries = [2000.0,2001.0,3000.0,4000.0],
-            values = [0.001,0.005,0.001,0.0001,0.00001]
+            values = [0.0001,0.005,0.0001,0.0001,0.00001]
             )
         # Use simple momentum for the optimization.
         # self.optimizer = tf.train.MomentumOptimizer(self.learning_rate,0.9).minimize(self.loss, global_step=self.batch)
