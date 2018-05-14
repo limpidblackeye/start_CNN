@@ -343,7 +343,7 @@ class Model(object):
         # fully connected layers.
         # pool_shape = pool.get_shape().as_list()
         # reshape = tf.reshape(pool,[pool_shape[0], pool_shape[1] * pool_shape[2] * pool_shape[3]])
-        reshape = tf.contrib.layers.flatten(pool)
+        reshape = tf.contrib.layers.flatten(pool4)
         # Fully connected layer. Note that the '+' operation automatically
         # broadcasts the biases.
         hidden = tf.nn.relu(tf.matmul(reshape, self.fc1_weights) + self.fc1_biases)
