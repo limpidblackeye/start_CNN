@@ -27,7 +27,7 @@ tf.app.flags.DEFINE_string('root_dir', '../data', 'data root dir')
 tf.app.flags.DEFINE_string('dataset', 'dset1', 'dset1 or dset2')
 tf.app.flags.DEFINE_integer('n_label', 65, 'number of classes')
 # trainig
-tf.app.flags.DEFINE_integer('batch_size', 32, 'mini batch for a training iter')
+tf.app.flags.DEFINE_integer('batch_size', 16, 'mini batch for a training iter')
 tf.app.flags.DEFINE_string('save_dir', './checkpoints', 'dir to the trained model')
 # test
 tf.app.flags.DEFINE_string('my_best_model', './checkpoints/model.ckpt-1000', 'for test')
@@ -234,53 +234,6 @@ class Model(object):
         '''TODO: Your code here.'''
 
         ################ declare variables #################
-        # This is where training samples and labels are fed to the graph.
-
-        # The variables below hold all the trainable weights. They are passed an
-        # initial value which will be assigned when we call:
-        # {tf.global_variables_initializer().run()}
-        # 5x5 filter, depth 32.
-        #################################
-
-        # # residual_block, honor: https://github.com/xuyuwei/resnet-tf/blob/master/resnet.py
-        # def conv_layer(inpt, filter_shape, stride):
-        #     out_channels = filter_shape[3]
-
-        #     filter_ = tf.Variable(tf.truncated_normal(filter_shape, stddev=0.1))
-        #     conv = tf.nn.conv2d(inpt, filter=filter_, strides=[1, stride, stride, 1], padding="SAME")
-        #     mean, var = tf.nn.moments(conv, axes=[0,1,2])
-        #     beta = tf.Variable(tf.zeros([out_channels]), name="beta")
-        #     gamma = tf.Variable(tf.truncated_normal([out_channels],stddev=0.1), name="gamma")
-            
-        #     batch_norm = tf.nn.batch_norm_with_global_normalization(
-        #         conv, mean, var, beta, gamma, 0.001,
-        #         scale_after_normalization=True)
-        #     out = tf.nn.relu(batch_norm)
-        #     return out
-
-        # def residual_block(inpt,input_depth, output_depth, down_sample, projection=False):
-        #     # input_depth = inpt.get_shape().as_list()[3]
-        #     if down_sample:
-        #         filter_ = [1,2,2,1]
-        #         inpt = tf.nn.max_pool(inpt, ksize=filter_, strides=filter_, padding='SAME')
-
-        #     conv1 = conv_layer(inpt, [3, 3, input_depth, output_depth], 1)
-        #     conv2 = conv_layer(conv1, [3, 3, output_depth, output_depth], 1)
-
-        #     if input_depth != output_depth:
-        #         if projection:
-        #             # Option B: Projection shortcut
-        #             input_layer = conv_layer(inpt, [1, 1, input_depth, output_depth], 2)
-        #         else:
-        #             # Option A: Zero-padding
-        #             input_layer = tf.pad(inpt, [[0,0], [0,0], [0,0], [0, output_depth - input_depth]])
-        #     else:
-        #         input_layer = inpt
-
-        #     res = conv2 + input_layer
-        #     return res
-
-        ################ define network #################
         """The Model definition."""
 
         # 2D convolution, with 'SAME' padding (i.e. the output feature map has
@@ -296,10 +249,6 @@ class Model(object):
         relu1 = tf.nn.relu(tf.nn.bias_add(batch_norm1, self.conv1_biases))
         pool1 = tf.nn.max_pool(relu1,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
     
-        # # res block        
-        # conv_res_x = residual_block(pool,32, 32, False)
-        # conv_res = residual_block(conv_res_x, 32, 32, False)
-
         # conv2
         conv2 = tf.nn.conv2d(pool1,self.conv2_weights,strides=[1, 1, 1, 1],padding='SAME')
         mean2, var2 = tf.nn.moments(conv2, axes=[0,1,2])
@@ -339,10 +288,6 @@ class Model(object):
         pool4 = tf.nn.max_pool(relu4, ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
         # pool = tf.nn.avg_pool(relu4,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
 
-        # Reshape the feature map cuboid into a 2D matrix to feed it to the
-        # fully connected layers.
-        # pool_shape = pool.get_shape().as_list()
-        # reshape = tf.reshape(pool,[pool_shape[0], pool_shape[1] * pool_shape[2] * pool_shape[3]])
         reshape = tf.contrib.layers.flatten(pool4)
         # Fully connected layer. Note that the '+' operation automatically
         # broadcasts the biases.
@@ -354,55 +299,20 @@ class Model(object):
         #! self.loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.train_labels_node, logits=logits))
         return logits
 
-    # def eval_in_batches(data, sess):
-    #     """Get all predictions for a dataset by running it in small batches."""
-    #     size = data.shape[0]
-    #     if size < EVAL_BATCH_SIZE:
-    #         raise ValueError("batch size for evals larger than dataset: %d" % size)
-    #     predictions = np.ndarray(shape=(size, NUM_LABELS), dtype=np.float32)
-    #     for begin in xrange(0, size, EVAL_BATCH_SIZE):
-    #         end = begin + EVAL_BATCH_SIZE
-    #         if end <= size:
-    #             predictions[begin:end, :] = sess.run(eval_prediction,feed_dict={self.eval_data: data[begin:end, ...]})
-    #         else:
-    #             batch_predictions = sess.run(eval_prediction,feed_dict={self.eval_data: data[-EVAL_BATCH_SIZE:, ...]})
-    #             predictions[begin:, :] = batch_predictions[begin - size:, :]
-    #     return predictions
-
     def train(self, ims, labels):
         '''TODO: Your code here.'''
-        # Optimizer: set up a variable that's incremented once per batch and
-
-        # Small utility function to evaluate a dataset by feeding batches of data to
-        # {eval_data} and pulling the results from {eval_predictions}.
-        # Saves memory and enables this to run on smaller GPUs.
-        # print("ims.shape:",ims.shape)
-        # print("labels.shape:",labels.shape)
-        # print("train_data_node.shape",self.train_data_node.shape)
-        # print("train_labels_node.shape",self.train_labels_node.shape)
         with tf.device('/gpu:5'):
         # with tf.Session() as sess:
         #     sess.run(self.init)
             # logits, label, loss, acc  = self.sess.run([self.logits, self.train_labels_node, self.loss,  self.accuracy], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.5})
             logit, label, loss, opti, acc, lr  = self.sess.run([self.logits,self.train_labels_node, self.loss, self.optimizer,  self.accuracy, self.learning_rate], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.8})
             # logits, label, loss, acc, lr  = self.sess.run([self.logits, self.train_labels_node, self.loss, self.accuracy,self.learning_rate], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.5})
-        #print "The shape is:"
-        #print "logits=", logits
-        #print "label=", label
             return loss, acc, lr
 
     def valid(self, ims, labels):
         '''TODO: Your code here.'''
         prediction, loss, acc = self.sess.run([self.prediction, self.loss, self.accuracy], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 1})
         return prediction, loss, acc
-
-        # # loss, acc = sess.run(Model[:-1], feed_dict={x: xTe, y: yTe})
-        # # print final result
-        # test_error = error_rate(self.eval_in_batches(ims, sess), labels)
-        # print('Test error: %.1f%%' % test_error)
-        # # Predictions for the test and validation, which we'll compute less often.
-        # predictions = tf.nn.softmax(model(self.eval_data))
-        # return self.predictions
 
     def save(self, itr):
         checkpoint_path = os.path.join(FLAGS.save_dir, 'model.ckpt')
@@ -425,19 +335,13 @@ def train_wrapper(model):
     valid_set = DataSet(FLAGS.root_dir, FLAGS.dataset, 'valid',
                         FLAGS.batch_size, FLAGS.n_label,
                         data_aug=False, shuffle=False)
-    '''create a tf session for training and validation
-    TODO: to run your model, you may call model.train(), model.save(), model.valid()'''
-    # declare model
 
     # Create a local session to run the training.
     num_epochs = NUM_EPOCHS
     train_size = train_set._num_examples
     print("train_size:",train_size)
     start_time = time.time()
-    # Run all the initializers to prepare the trainable parameters.
-    # tf.global_variables_initializer().run()
     print('Initialized!')
-    # Loop through training steps.
     best_accuracy = 0
     # for step in xrange(int(num_epochs * train_size) // BATCH_SIZE):
     for step in xrange(10000):
@@ -447,16 +351,6 @@ def train_wrapper(model):
             train_set.init_epoch()
         train_data, train_labels = train_set.next_batch()
         loss, acc, lr = model.train(train_data, train_labels)
-        # print("!!!fc2_biases:",fc2_biases)
-        # batch
-        # offset = (step * BATCH_SIZE) % (train_size - BATCH_SIZE)
-        # batch_data = train_data[offset:(offset + BATCH_SIZE), ...]
-        # batch_labels = train_labels[offset:(offset + BATCH_SIZE)]
-        # This dictionary maps the batch data (as a np array) to the
-    
-        # # Run the optimizer to update weights.
-        # feed_dict = {self.train_data_node: batch_data, self.train_labels_node: batch_labels}
-        # sess.run(optimizer, feed_dict=feed_dict)
 
         # print some extra information once reach the evaluation frequency
         if step % EVAL_FREQUENCY == 0:
@@ -485,15 +379,7 @@ def train_wrapper(model):
                 best_accuracy = acc_val
                 model.save(step)
             # sys.stdout.flush()
-
-
-        # valid_error = error_rate(self.eval_in_batches(valid_data, sess), valid_labels)
-        # print('Validation error: %.1f%%' % valid_error)
- 
-    # with tf.Session() as sess:
-    #     model=Model()
-    #     model.train(train_data, train_labels)
-    #     model.valid(valid_data, valid_labels)
+            print('Final validation best_accuracy:%.3f' % acc_val)
    
 def test_wrapper(model):
     pass
