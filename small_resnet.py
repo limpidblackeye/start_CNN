@@ -16,7 +16,6 @@ import time
 from six.moves import urllib
 from six.moves import xrange  # pylint: disable=redefined-builtin
 
-
 # configs
 FLAGS = tf.app.flags.FLAGS
 # mode
@@ -28,9 +27,9 @@ tf.app.flags.DEFINE_string('dataset', 'dset2', 'dset1 or dset2')
 tf.app.flags.DEFINE_integer('n_label', 65, 'number of classes')
 # trainig
 tf.app.flags.DEFINE_integer('batch_size', 16, 'mini batch for a training iter')
-tf.app.flags.DEFINE_string('save_dir', './checkpoints', 'dir to the trained model')
+tf.app.flags.DEFINE_string('save_dir', '../checkpoints_small_resnet', 'dir to the trained model')
 # test
-tf.app.flags.DEFINE_string('my_best_model', './checkpoints/model.ckpt-1000', 'for test')
+tf.app.flags.DEFINE_string('my_best_model', '../checkpoints_small_resnet/model.ckpt-2100', 'for test')
 
 '''TODO: you may add more configs such as base learning rate, max_iteration,
 display_iteration, valid_iteration and etc. '''
@@ -301,7 +300,7 @@ class Model(object):
 
     def train(self, ims, labels):
         '''TODO: Your code here.'''
-        with tf.device('/gpu:5'):
+        with tf.device('/gpu:0'):
         # with tf.Session() as sess:
         #     sess.run(self.init)
             # logits, label, loss, acc  = self.sess.run([self.logits, self.train_labels_node, self.loss,  self.accuracy], feed_dict={self.train_data_node: ims, self.train_labels_node: labels, self.drop_out_rate: 0.5})
@@ -382,22 +381,30 @@ def train_wrapper(model):
     print('Final validation best_accuracy:%.3f' % best_accuracy)
    
 def test_wrapper(model):
-    pass
-    # '''Finish this function so that TA could test your code easily.'''    
-    # test_set = DataSet(FLAGS.root_dir, FLAGS.dataset, 'test',
-    #                    FLAGS.batch_size, FLAGS.n_label,
-    #                    data_aug=False, shuffle=False)
-    # test_data, test_labels = test_set.load_data()
-    # '''TODO: Your code here.'''
-    #     # load checkpoints
-    # with tf.Session() as sess:
-    #     model=Model()
-    #     if model.load(model.checkpoint_path, model.dataset_name):
-    #         print("[*] SUCCESS to load model for %s." % model.dataset_name)
-    #     else:
-    #         print("[!] Failed to load model for %s." % model.dataset_name)
-    #         sys.exit(1)
-    #     model.valid(test_data, test_labels)
+    '''Finish this function so that TA could test your code easily.'''    
+    test_set = DataSet(FLAGS.root_dir, FLAGS.dataset, 'test',
+                       FLAGS.batch_size, FLAGS.n_label,
+                       data_aug=False, shuffle=False)
+    test_data, test_labels = test_set.load_data()
+    '''TODO: Your code here.'''
+        # load checkpoints
+    with tf.Session() as sess:
+        model=Model()
+        if model.load():
+            print("[*] SUCCESS to load model")
+        else:
+            print("[!] Failed to load model!")
+            sys.exit(1)
+        tot_acc = 0
+        tot_input = 0
+        while test_set.has_next_batch():
+            test_data, test_labels = test_set.next_batch()
+            _, loss_val, acc_val = model.valid(test_data, test_labels)
+            tot_acc += acc_val * len(test_data)
+            tot_input += len(test_data)
+        acc_val = tot_acc / tot_input
+        print("tot_acc:",tot_acc)
+        print("tot_input",tot_input)
 
 def main(argv=None):
     print('Initializing models')
