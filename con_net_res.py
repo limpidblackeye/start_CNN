@@ -201,7 +201,7 @@ class Model(object):
         if self.batch * BATCH_SIZE<6000.0*BATCH_SIZE:
         	self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss, global_step=self.batch)
       	else:
-      		self.optimizer = tf.train.GradientDescentOptimizer(self.learning_rate)
+      		self.optimizer = tf.train.GradientDescentOptimizer(self.learning_rate).minimize(self.loss, global_step=self.batch)
 
         # Evaluate model
         self.prediction = tf.nn.softmax(self.logits)
