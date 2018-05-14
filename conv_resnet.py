@@ -195,11 +195,11 @@ class Model(object):
         self.learning_rate = tf.train.piecewise_constant(
             self.batch,
             boundaries = [2000.0,2001.0,3000.0,4000.0],
-            values = [0.0001,0.005,0.0001,0.0001,0.00001]
+            values = [0.01,0.005,0.0001,0.0001,0.00001]
             )
         # Use simple momentum for the optimization.
+        # self.learning_rate = tf.Variable(0.01, dtype=tf.float32)
         # self.optimizer = tf.train.MomentumOptimizer(self.learning_rate,0.9).minimize(self.loss, global_step=self.batch)
-        # self.learning_rate = 0.01
         if tf.greater(tf.Variable(6000.0,dtype=tf.float32),self.batch)==tf.Variable(True,dtype=tf.bool):
             self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss, global_step=self.batch)
         else:
@@ -219,6 +219,29 @@ class Model(object):
         self.configProt.allow_soft_placement = True
         self.sess = tf.Session(config=self.configProt)
         self.sess.run(self.init)
+
+    # residual_block, honor: https://github.com/xuyuwei/resnet-tf/blob/master/resnet.py
+    def residual_block(inpt, output_depth, down_sample, projection=False):
+        input_depth = inpt.get_shape().as_list()[3]
+        if down_sample:
+            filter_ = [1,2,2,1]
+            inpt = tf.nn.max_pool(inpt, ksize=filter_, strides=filter_, padding='SAME')
+
+        conv1 = conv_layer(inpt, [3, 3, input_depth, output_depth], 1)
+        conv2 = conv_layer(conv1, [3, 3, output_depth, output_depth], 1)
+
+        if input_depth != output_depth:
+            if projection:
+                # Option B: Projection shortcut
+                input_layer = conv_layer(inpt, [1, 1, input_depth, output_depth], 2)
+            else:
+                # Option A: Zero-padding
+                input_layer = tf.pad(inpt, [[0,0], [0,0], [0,0], [0, output_depth - input_depth]])
+        else:
+            input_layer = inpt
+
+        res = conv2 + input_layer
+        return res
 
     def construct_model(self):
         '''TODO: Your code here.'''
@@ -246,8 +269,12 @@ class Model(object):
         # the data. Here we have a pooling window of 2, and a stride of 2.
         pool = tf.nn.max_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
         
+        # res block
+        conv_res_x = residual_block(pool, 32, down_sample)
+        conv_res = residual_block(conv3_x, 32, False)
+
         # conv2
-        conv = tf.nn.conv2d(pool,self.conv2_weights,strides=[1, 1, 1, 1],padding='SAME')
+        conv = tf.nn.conv2d(conv_res,self.conv2_weights,strides=[1, 1, 1, 1],padding='SAME')
         relu = tf.nn.relu(tf.nn.bias_add(conv, self.conv2_biases))
         pool = tf.nn.max_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
         # pool = tf.nn.avg_pool(relu,ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1],padding='SAME')
