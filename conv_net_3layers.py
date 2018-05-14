@@ -281,11 +281,15 @@ class Model(object):
         self.saver.save(self.sess, checkpoint_path, global_step=itr)
         print('saved to ' + FLAGS.save_dir)
 
-    def load(self):
+   def load(self):
         print('load model:', FLAGS.my_best_model)
-        self.saver = tf.train.import_meta_graph(FLAGS.my_best_model)
-        self.saver.restore(self.sess, tf.train.latest_checkpoint('./'))
-        
+        self.saver.restore(self.sess, FLAGS.my_best_model)
+
+    # def load(self):
+    #     print('load model:', FLAGS.my_best_model)
+    #     self.saver = tf.train.import_meta_graph(FLAGS.my_best_model)
+    #     self.saver.restore(self.sess, tf.train.latest_checkpoint('./'))
+
 #################################
 
 ################ define train and test #################
