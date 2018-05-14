@@ -496,21 +496,22 @@ def train_wrapper(model):
     #     model.valid(valid_data, valid_labels)
    
 def test_wrapper(model):
-    '''Finish this function so that TA could test your code easily.'''    
-    test_set = DataSet(FLAGS.root_dir, FLAGS.dataset, 'test',
-                       FLAGS.batch_size, FLAGS.n_label,
-                       data_aug=False, shuffle=False)
-    test_data, test_labels = test_set.load_data()
-    '''TODO: Your code here.'''
-        # load checkpoints
-    with tf.Session() as sess:
-        model=Model()
-        if model.load(model.checkpoint_path, model.dataset_name):
-            print("[*] SUCCESS to load model for %s." % model.dataset_name)
-        else:
-            print("[!] Failed to load model for %s." % model.dataset_name)
-            sys.exit(1)
-        model.valid(test_data, test_labels)
+    pass
+    # '''Finish this function so that TA could test your code easily.'''    
+    # test_set = DataSet(FLAGS.root_dir, FLAGS.dataset, 'test',
+    #                    FLAGS.batch_size, FLAGS.n_label,
+    #                    data_aug=False, shuffle=False)
+    # test_data, test_labels = test_set.load_data()
+    # '''TODO: Your code here.'''
+    #     # load checkpoints
+    # with tf.Session() as sess:
+    #     model=Model()
+    #     if model.load(model.checkpoint_path, model.dataset_name):
+    #         print("[*] SUCCESS to load model for %s." % model.dataset_name)
+    #     else:
+    #         print("[!] Failed to load model for %s." % model.dataset_name)
+    #         sys.exit(1)
+    #     model.valid(test_data, test_labels)
 
 def main(argv=None):
     print('Initializing models')

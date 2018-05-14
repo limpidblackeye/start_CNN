@@ -346,6 +346,7 @@ def train_wrapper(model):
                 model.save(step)
 
 def test_wrapper(model):
+    pass
     # '''Finish this function so that TA could test your code easily.'''    
     # test_set = DataSet(FLAGS.root_dir, FLAGS.dataset, 'test',
     #                    FLAGS.batch_size, FLAGS.n_label,
